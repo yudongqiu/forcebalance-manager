@@ -1,0 +1,14 @@
+import axios from "axios";
+
+class ForceBalanceAPI {
+    backendUrl = 'http://127.0.0.1:5005';
+    getStatus() {
+        return axios.get(`${this.backendUrl}/api/status`).then(data => {
+            return data.data;
+        });
+    }
+}
+
+const api = new ForceBalanceAPI();
+
+export default api;
