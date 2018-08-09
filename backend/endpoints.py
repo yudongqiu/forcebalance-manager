@@ -25,3 +25,12 @@ def getStatus():
         'status': project.status
     })
 
+@app.route('/api/reset')
+def reset_optimizer():
+    project.reset()
+    return json.dumps('success')
+
+@app.route('/api/launch')
+def launch_optimize():
+    project.run_optimizer()
+    return json.dumps('success')

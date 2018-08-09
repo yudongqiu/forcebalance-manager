@@ -57,6 +57,11 @@ typings/
 # next.js build output
 .next
 
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+
 # vscode
 .vscode
 

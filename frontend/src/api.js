@@ -7,6 +7,18 @@ class ForceBalanceAPI {
             return data.data;
         });
     }
+
+    runOptimizer() {
+        return axios.get(`${this.backendUrl}/api/launch`).then(data => {
+            return data.data;
+        });
+    }
+
+    resetOptimizer() {
+        return axios.get(`${this.backendUrl}/api/reset`).then(data => {
+            return data.data;
+        });
+    }
 }
 
 const api = new ForceBalanceAPI();
