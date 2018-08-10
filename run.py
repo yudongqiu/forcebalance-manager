@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from backend import app
+from backend import app, socketio
 
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False, port=5005)
+    #app.run(debug=True, use_reloader=False, port=5005)
+    socketio.run(app, debug=True, use_reloader=False, port=5005)

@@ -1,9 +1,7 @@
-from flask import abort, request, send_from_directory
-import json
-from backend import app
-from backend.FBProject import FBProject
+from flask import send_from_directory
 
-project = FBProject()
+from backend import app
+from backend.fb_manager import manager
 
 @app.route('/')
 def index():
@@ -13,24 +11,3 @@ def index():
 @app.route('/<path:path>')
 def send_file(path):
     return app.send_static_file(path)
-
-@app.route('/api/status')
-def getStatus():
-    return json.dumps({
-        'work_queue': {
-            'running': 10,
-            'finished': 20,
-            'total': 30,
-        },
-        'status': project.status
-    })
-
-@app.route('/api/reset')
-def reset_optimizer():
-    project.reset()
-    return json.dumps('success')
-
-@app.route('/api/launch')
-def launch_optimize():
-    project.run_optimizer()
-    return json.dumps('success')

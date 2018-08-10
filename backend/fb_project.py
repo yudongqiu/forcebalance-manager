@@ -17,6 +17,10 @@ class FBProject(object):
         self._name = name
         self.status = self.project_status['idle']
         self._options = dict()
+        self._manager = None
+
+    def register_manager(self, manager):
+        self._manager = manager
 
     def load_fb_options(self, options):
         pass
@@ -30,13 +34,17 @@ class FBProject(object):
     def create_optimizer(self):
         self._optimizer = None
 
-    def run_optimizer(self):
-        self.status = self.project_status['running']
+    def launch_optimizer(self):
+        self.update_status('running')
         time.sleep(5)
-        self.status = self.project_status['finished']
+        self.update_status('finished')
 
-    def reset(self):
-        self.status = self.project_status['idle']
+    def update_status(self, statusName):
+        assert self._manager is not None, 'This project has not been connected to a manager yet'
+        assert statusName in self.project_status, f'Invalid statusName {statusName}'
+        self.status = self.project_status[statusName]
+        self._manager.update_status(self._name)
 
 
-
+    def reset_optimizer(self):
+        self.update_status('idle')

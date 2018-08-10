@@ -16,32 +16,19 @@ class StatusButton extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      status: 0,
+      status: 4,
     }
   }
 
+  updateStatus = (data) => {
+    this.setState({
+      status: data.status
+    });
+  }
+
   componentDidMount() {
-    this.tick();
-    this.timerID = setInterval(
-      () => this.tick(),
-      10000
-    )
-  }
-
-  componentWillUnmount() {
-    clearInterval(this.timerID);
-  }
-
-  tick() {
-    api.getStatus().then(data => {
-      this.setState({
-        status: data.status
-      })
-    }, e => {
-      this.setState({
-        status: RunningStatus.noConnection
-      })
-    })
+    api.register('update_status', this.updateStatus);
+    api.pullStatus();
   }
 
   render() {

@@ -87,8 +87,12 @@ class JobInput extends React.Component {
     }
   }
 
-  runOptimizer = () => {
-    api.runOptimizer();
+  resetOptimizer = () => {
+    api.resetOptimizer();
+  }
+
+  launchOptimizer = () => {
+    api.launchOptimizer();
   }
 
   render () {
@@ -286,8 +290,8 @@ class JobInput extends React.Component {
                 {inputForm}
               </CardBody>
               <CardFooter>
-                <Button color="primary">Update Input</Button>
-                <Button color="primary" onClick={this.runOptimizer}>Update Input</Button>
+                <Button color="primary" onClick={this.resetOptimizer}>Reset</Button>
+                <Button color="info" onClick={this.launchOptimizer}>Launch Optimizer</Button>
               </CardFooter>
             </Card>
           </GridItem>
