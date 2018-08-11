@@ -2,11 +2,20 @@ import io from 'socket.io-client';
 
 class ForceBalanceAPI {
     socket = io('http://127.0.0.1:5005/api');
-    projectName = 'First project';
+    projectName = null;
     eventCallbacks = {};
 
-    constructor() {
-        this.socket.emit('create_project', this.projectName);
+    setProject(name) {
+        this.projectName = name;
+    }
+
+    createProject(name) {
+        this.socket.emit('create_project', name);
+        this.setProject(name);
+    }
+
+    listProjects() {
+        this.socket.emit('list_projects', (data) => {return data;});
     }
 
     launchOptimizer() {

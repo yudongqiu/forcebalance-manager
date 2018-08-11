@@ -4,25 +4,18 @@ import Button from "components/CustomButtons/Button.jsx";
 
 import api from "../../api";
 
-const RunningStatus = {
-  idle: 0,
-  running: 1,
-  finished: 2,
-  error: 3,
-  noConnection: 4,
-}
-
-class StatusButton extends React.Component {
+class ProjectSelector extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      status: 4,
+      projectNames: [],
+      projectValue: 0
     }
   }
 
-  updateStatus = (data) => {
+  updateProjectValue = (value) => {
     this.setState({
-      status: data.status,
+      projectValue: value
     });
   }
 
@@ -61,4 +54,4 @@ class StatusButton extends React.Component {
 
 }
 
-export default StatusButton;
+export default ProjectSelector;

@@ -45,6 +45,5 @@ class FBProject(object):
         self.status = self.project_status[statusName]
         self._manager.update_status(self._name)
 
-
     def reset_optimizer(self):
         self.update_status('idle')

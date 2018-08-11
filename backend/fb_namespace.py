@@ -11,6 +11,11 @@ class FBNamespace(Namespace):
         print(f"socketIO: Received create_project command for project {projectName}")
         self._manager.create_project(projectName)
 
+    def on_list_projects(self):
+        assert hasattr(self, '_manager'), 'Manager is not registered yet'
+        print(f"socketIO: Received list_projects command")
+        return self._manager.list_projects()
+
     def on_launch_optimizer(self, projectName):
         """ receiver for 'launch_optimizer' event """
         print(f"socketIO: Received launch_optimizer command for project {projectName}")

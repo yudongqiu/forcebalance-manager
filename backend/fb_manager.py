@@ -13,6 +13,9 @@ class FBManager:
         project.register_manager(self)
         self._projects[projectName]  = project
 
+    def list_projects(self):
+        return list(self._projects.keys())
+
     def launch_optimizer(self, projectName):
         project = self._projects[projectName]
         project.launch_optimizer()
