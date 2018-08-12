@@ -13,6 +13,10 @@ class FBProject(object):
         assert value in self.project_status.values(), 'Invalid status value.'
         self._status = value
 
+    @property
+    def name(self):
+        return self._name
+
     def __init__(self, name='Project'):
         self._name = name
         self.status = self.project_status['idle']
@@ -21,6 +25,14 @@ class FBProject(object):
 
     def register_manager(self, manager):
         self._manager = manager
+
+    def get_input_params(self):
+        """ Info for frontend JobInput.jsx """
+        return {
+            'projectName': self.name,
+            'fileName': '123.txt',
+            'JobType': 'Single',
+        }
 
     def load_fb_options(self, options):
         pass

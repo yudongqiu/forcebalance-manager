@@ -1,55 +1,116 @@
 import React from "react";
 
+import Menu from '@material-ui/core/Menu';
+import MenuItem from '@material-ui/core/MenuItem';
 import Button from "components/CustomButtons/Button.jsx";
+import ListSubheader from '@material-ui/core/ListSubheader';
 
+import CreateProjectDialog from "./CreateProjectDialog";
 import api from "../../api";
 
 class ProjectSelector extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      projectNames: [],
-      projectValue: 0
+      anchorEl: null,
+      projects: [],
+      projectValue: 0,
+      DialogOpen: false,
     }
   }
 
-  updateProjectValue = (value) => {
+
+  updateProjects = (projects) => {
     this.setState({
-      projectValue: value
+      projects: projects
     });
+    const projectValue = projects.map(p => {p.projectName}).indexOf(this.props.projectName);
+    if (projectValue > -1) {
+      this.setState({
+        projectValue: projectValue
+      });
+    }
   }
 
   componentDidMount() {
-    api.register('update_status', this.updateStatus);
-    api.pullStatus();
+    api.listProjects(this.updateProjects);
+  }
+
+  handleClick = (event) => {
+    this.setState({
+      anchorEl: event.currentTarget
+    });
+  }
+
+  handleCloseMenu = () => {
+    this.setState({
+      anchorEl: null,
+    });
+  }
+
+  handleMenuItemClick = (event, index) => {
+    this.setState({
+      projectValue: index,
+      anchorEl: null,
+      projectName: this.state.projects[index],
+    });
+    const pName = this.state.projects[index].projectName;
+    api.setProject(pName);
+  }
+
+  handleOpenDialog = () => {
+    this.setState({
+      DialogOpen: true
+    });
+  }
+
+  handleCloseDialog = () => {
+    this.setState({
+      DialogOpen: false
+    });
   }
 
   render() {
-    const status = this.state.status;
-    let statusButton = (<div />);
-    if (status === RunningStatus.idle) {
-      statusButton = (
-        <Button color="white" round> Idle </Button>
-      )
-    } else if (status === RunningStatus.running) {
-      statusButton = (
-        <Button color="info" round>Running</Button>
-      )
-    } else if (status === RunningStatus.finished) {
-      statusButton = (
-        <Button color="success" round>Finished</Button>
-      )
-    } else if (status === RunningStatus.error) {
-      statusButton = (
-        <Button color="danger" round>Error</Button>
-      )
-    } else if (status === RunningStatus.noConnection) {
-      statusButton = (
-        <Button color="primary" round>No connection</Button>
-      )
+    const { projects, projectValue, anchorEl } = this.state;
+    if (projects.length === 0) {
+      return (
+        <span>
+          <Button onClick={this.handleOpenDialog}>Create Project</Button>
+          <CreateProjectDialog open={this.state.DialogOpen} onClose={this.handleCloseDialog} />
+        </span>
+      );
+    } else {
+      return (
+        <span>
+          <Button onClick={this.handleClick}> {this.props.projectName} </Button>
+          <Menu
+            id="project-menu"
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={this.handleCloseMenu}
+          >
+            <ListSubheader>Existing Projects</ListSubheader>
+            {projects.map((proj, index) => (
+              <MenuItem
+                key={proj.projectName}
+                selected={index === projectValue}
+                onClick={(event) => this.handleMenuItemClick(event, index)}
+              >
+                {proj.projectName}
+              </MenuItem>
+            ))}
+            <ListSubheader>Create New</ListSubheader>
+            <MenuItem
+              key="Create Project"
+              onClick={this.handleOpenDialog}
+            >
+              Create New Project
+            </MenuItem>
+          </Menu>
+          <CreateProjectDialog open={this.state.DialogOpen} onClose={this.handleCloseDialog} />
+        </span>
+      );
     }
-
-    return statusButton;
   }
 
 }

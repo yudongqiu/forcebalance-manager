@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React from "react";
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
 import { Switch, Route, Redirect } from "react-router-dom";
 // creates a beautiful scrollbar
 import PerfectScrollbar from "perfect-scrollbar";
@@ -19,6 +19,9 @@ import dashboardStyle from "assets/jss/material-dashboard-react/layouts/dashboar
 import image from "assets/img/sidebar-2.jpg";
 import logo from "assets/img/ForceBalance.svg";
 
+import ContextProvider from "../../ContextProvider.js";
+import api from "../../api.js";
+
 const switchRoutes = (
   <Switch>
     {dashboardRoutes.map((prop, key) => {
@@ -31,13 +34,22 @@ const switchRoutes = (
 
 class App extends React.Component {
   state = {
-    mobileOpen: false
+    mobileOpen: false,
+    projectName: null,
   };
   handleDrawerToggle = () => {
     this.setState({ mobileOpen: !this.state.mobileOpen });
   };
   getRoute() {
     return this.props.location.pathname !== "/maps";
+  }
+  componentWillMount() {
+    api.onChangeProjectName((name) => {
+      this.setState({
+        projectName: name
+      })
+    });
+    api.checkProject();
   }
   componentDidMount() {
     if (navigator.platform.indexOf("Win") > -1) {
@@ -55,34 +67,35 @@ class App extends React.Component {
   render() {
     const { classes, ...rest } = this.props;
     return (
-      <div className={classes.wrapper}>
-        <Sidebar
-          routes={dashboardRoutes}
-          logoText={"ForceBalance"}
-          logo={logo}
-          image={image}
-          handleDrawerToggle={this.handleDrawerToggle}
-          open={this.state.mobileOpen}
-          color="blue"
-          {...rest}
-        />
-        <div className={classes.mainPanel} ref="mainPanel">
-          <Header
+        <div className={classes.wrapper}>
+          <Sidebar
             routes={dashboardRoutes}
+            logoText={"ForceBalance"}
+            logo={logo}
+            image={image}
             handleDrawerToggle={this.handleDrawerToggle}
+            open={this.state.mobileOpen}
+            color="blue"
             {...rest}
           />
-          {/* On the /maps route we want the map to be on full screen - this is not possible if the content and conatiner classes are present because they have some paddings which would make the map smaller */}
-          {this.getRoute() ? (
-            <div className={classes.content}>
-              <div className={classes.container}>{switchRoutes}</div>
-            </div>
-          ) : (
-            <div className={classes.map}>{switchRoutes}</div>
-          )}
-          {this.getRoute() ? <Footer /> : null}
+          <div className={classes.mainPanel} ref="mainPanel">
+            <Header
+              routes={dashboardRoutes}
+              handleDrawerToggle={this.handleDrawerToggle}
+              projectName={this.state.projectName}
+              {...rest}
+            />
+            {/* On the /maps route we want the map to be on full screen - this is not possible if the content and conatiner classes are present because they have some paddings which would make the map smaller */}
+            {this.getRoute() ? (
+              <div className={classes.content}>
+                <div className={classes.container}>{switchRoutes}</div>
+              </div>
+            ) : (
+              <div className={classes.map}>{switchRoutes}</div>
+            )}
+            {this.getRoute() ? <Footer /> : null}
+          </div>
         </div>
-      </div>
     );
   }
 }

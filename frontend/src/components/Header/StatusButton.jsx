@@ -16,7 +16,7 @@ class StatusButton extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      status: 4,
+      status: null,
     }
   }
 
@@ -31,9 +31,13 @@ class StatusButton extends React.Component {
     api.pullStatus();
   }
 
+  componentDidUpdate() {
+    api.pullStatus();
+  }
+
   render() {
     const status = this.state.status;
-    let statusButton = (<div />);
+    let statusButton = null;
     if (status === RunningStatus.idle) {
       statusButton = (
         <Button color="white" round> Idle </Button>
@@ -55,7 +59,6 @@ class StatusButton extends React.Component {
         <Button color="primary" round>No connection</Button>
       )
     }
-
     return statusButton;
   }
 

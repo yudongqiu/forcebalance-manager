@@ -30,6 +30,9 @@ class FBNamespace(Namespace):
         print(f"socketIO: Received pull_status command for project {projectName}")
         self._manager.update_status(projectName)
 
+    def on_get_input_params(self, projectName):
+        return self._manager.get_input_params(projectName)
+
 fb_ns = FBNamespace('/api')
 
 socketio.on_namespace(fb_ns)

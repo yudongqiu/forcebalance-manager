@@ -19,6 +19,7 @@ import CustomInput from "components/CustomInput/CustomInput.jsx";
 import Button from "components/CustomButtons/Button.jsx";
 
 import headerLinksStyle from "assets/jss/material-dashboard-react/components/headerLinksStyle";
+import ProjectSelector from "./ProjectSelector";
 import StatusButton from "./StatusButton";
 
 class HeaderLinks extends React.Component {
@@ -37,7 +38,8 @@ class HeaderLinks extends React.Component {
     const { open } = this.state;
     return (
       <div>
-        <StatusButton />
+        <ProjectSelector projectName={this.props.projectName}/>
+        <StatusButton projectName={this.props.projectName}/>
         <Manager className={classes.manager}>
           <Target>
             <Button

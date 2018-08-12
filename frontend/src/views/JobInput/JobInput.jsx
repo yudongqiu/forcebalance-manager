@@ -20,6 +20,7 @@ import Card from "components/Card/Card.jsx";
 import CardHeader from "components/Card/CardHeader.jsx";
 import CardBody from "components/Card/CardBody.jsx";
 import CardFooter from "components/Card/CardFooter.jsx";
+
 import api from "../../api";
 
 
@@ -63,7 +64,6 @@ const styles = {
 
 class JobInput extends React.Component {
   state = {
-    filename: '',
     jobType: 'optimize',
     maxStep: 100,
     penType: 'L2',
@@ -74,6 +74,18 @@ class JobInput extends React.Component {
     finiteH: 0.001,
   }
 
+  componentDidMount() {
+    api.onChangeProjectName(this.update);
+  }
+
+  update = () => {
+    api.getInputParams(this.updateParams);
+  }
+
+  updateParams = (data) => {
+    this.setState(data);
+  }
+
   handleChange = event => {
     this.setState({ [event.target.name]: event.target.value });
   }
@@ -82,7 +94,7 @@ class JobInput extends React.Component {
     const file = event.target.files[0];
     if (file) {
       this.setState({
-        filename: file.name,
+        fileName: file.name,
       });
     }
   }
@@ -96,6 +108,10 @@ class JobInput extends React.Component {
   }
 
   render () {
+    if (api.projectName === null) {
+      return (<div>
+      </div>)
+    }
     const { classes } = this.props;
     const inputForm = (
       <div>
@@ -108,7 +124,7 @@ class JobInput extends React.Component {
                   fullWidth: true
                 }}
                 inputProps={{
-                  value: this.state.filename,
+                  value: this.state.fileName,
                   placeholder: "Click Upload Button",
                   endAdornment: (
                     <InputAdornment position="end">
@@ -120,7 +136,7 @@ class JobInput extends React.Component {
                       </label>
                     </InputAdornment>
                   ),
-                  error: !this.state.filename
+                  error: !this.state.fileName
                 }}
 
               />

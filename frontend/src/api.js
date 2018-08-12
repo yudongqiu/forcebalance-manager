@@ -4,9 +4,29 @@ class ForceBalanceAPI {
     socket = io('http://127.0.0.1:5005/api');
     projectName = null;
     eventCallbacks = {};
+    onChangeCallbacks = [];
+
+    checkProject() {
+        this.socket.emit('list_projects', (data) => {
+            if (data.length > 0) {
+                this.setProject(data[0].projectName);
+            }
+        });
+    }
+
+    onChangeProjectName(callback) {
+        if (this.onChangeCallbacks.indexOf(callback) === -1) {
+            this.onChangeCallbacks.push(callback);
+        }
+    }
 
     setProject(name) {
-        this.projectName = name;
+        if (this.projectName !== name) {
+            this.projectName = name;
+            this.onChangeCallbacks.forEach(callback => {
+                callback(name);
+            })
+        }
     }
 
     createProject(name) {
@@ -14,8 +34,12 @@ class ForceBalanceAPI {
         this.setProject(name);
     }
 
-    listProjects() {
-        this.socket.emit('list_projects', (data) => {return data;});
+    listProjects(callback) {
+        this.socket.emit('list_projects', (data) => {callback(data)});
+    }
+
+    getInputParams(callback) {
+        this.socket.emit('get_input_params', this.projectName, (data) => {callback(data)});
     }
 
     launchOptimizer() {
