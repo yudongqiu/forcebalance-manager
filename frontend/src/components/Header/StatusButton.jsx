@@ -22,7 +22,7 @@ class StatusButton extends React.Component {
 
   updateStatus = (data) => {
     this.setState({
-      status: data.status,
+        status: data.status,
     });
   }
 
@@ -31,8 +31,10 @@ class StatusButton extends React.Component {
     api.pullStatus();
   }
 
-  componentDidUpdate() {
-    api.pullStatus();
+  componentDidUpdate(prevProps) {
+    if (this.props.projectName !== prevProps.projectName) {
+      api.pullStatus();
+    }
   }
 
   render() {

@@ -19,6 +19,15 @@ class ProjectSelector extends React.Component {
     }
   }
 
+  componentDidMount() {
+    api.listProjects(this.updateProjects);
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.projectName !== prevProps.projectName) {
+      api.listProjects(this.updateProjects);
+    }
+  }
 
   updateProjects = (projects) => {
     this.setState({
@@ -30,10 +39,6 @@ class ProjectSelector extends React.Component {
         projectValue: projectValue
       });
     }
-  }
-
-  componentDidMount() {
-    api.listProjects(this.updateProjects);
   }
 
   handleClick = (event) => {
@@ -60,13 +65,14 @@ class ProjectSelector extends React.Component {
 
   handleOpenDialog = () => {
     this.setState({
-      DialogOpen: true
+      DialogOpen: true,
     });
   }
 
   handleCloseDialog = () => {
     this.setState({
-      DialogOpen: false
+      DialogOpen: false,
+      anchorEl: null,
     });
   }
 

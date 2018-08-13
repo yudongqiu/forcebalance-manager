@@ -43,18 +43,16 @@ class App extends React.Component {
   getRoute() {
     return this.props.location.pathname !== "/maps";
   }
-  componentWillMount() {
+  componentDidMount() {
+    if (navigator.platform.indexOf("Win") > -1) {
+      const ps = new PerfectScrollbar(this.refs.mainPanel);
+    }
     api.onChangeProjectName((name) => {
       this.setState({
         projectName: name
       })
     });
     api.checkProject();
-  }
-  componentDidMount() {
-    if (navigator.platform.indexOf("Win") > -1) {
-      const ps = new PerfectScrollbar(this.refs.mainPanel);
-    }
   }
   componentDidUpdate(e) {
     if (e.history.location.pathname !== e.location.pathname) {
