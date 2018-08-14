@@ -13,9 +13,18 @@ export default class CreateProjectDialog extends React.Component {
     super(props);
     this.state = {
       text: 'New Project',
+      projectNames: [],
     }
-    this.props = props;
   }
+
+  componentDidMount() {
+    api.listProjects((projects) => {
+      this.setState({
+        projectNames: projects.map(p => {return p.projectName})
+      })
+    });
+  }
+
 
   handleChange = (event) => {
     this.setState({ text: event.target.value });
@@ -29,30 +38,38 @@ export default class CreateProjectDialog extends React.Component {
 
   handleCreateProject = () => {
     api.createProject(this.state.text);
+    this.setState({
+      projectNames: this.state.projectNames.concat([this.state.text]),
+    })
     this.props.onClose();
   };
 
   render () {
+    const { text, projectNames } = this.state;
+    const projectExists = (projectNames.indexOf(text) !== -1);
     return (
       <Dialog
         open={this.props.open}
         onClose={this.props.onClose}
       >
-        <DialogTitle id="form-dialog-title">New Project</DialogTitle>
+        <DialogTitle id="form-dialog-title">Create New Project</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             label="Project Name"
             fullWidth
-            value={this.state.text}
+            value={text}
             onChange={this.handleChange}
+            error={projectExists}
+            helperText={projectExists ? "Project Exists": 'Project name available'}
+            style={{width: 500}}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={this.props.onClose} >
             Cancel
           </Button>
-          <Button onClick={this.handleCreateProject} >
+          <Button onClick={this.handleCreateProject} disabled={projectExists} >
             Create
           </Button>
         </DialogActions>

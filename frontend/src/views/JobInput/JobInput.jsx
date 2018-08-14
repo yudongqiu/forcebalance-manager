@@ -76,6 +76,7 @@ class JobInput extends React.Component {
 
   componentDidMount() {
     api.onChangeProjectName(this.update);
+    this.update();
   }
 
   update = () => {

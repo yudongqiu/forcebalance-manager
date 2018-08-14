@@ -43,15 +43,21 @@ class ForceBalanceAPI {
     }
 
     launchOptimizer() {
-        this.socket.emit('launch_optimizer', this.projectName);
+        if (this.projectName !== null) {
+            this.socket.emit('launch_optimizer', this.projectName);
+        }
     }
 
     resetOptimizer() {
-        this.socket.emit('reset_optimizer', this.projectName);
+        if (this.projectName !== null) {
+            this.socket.emit('reset_optimizer', this.projectName);
+        }
     }
 
     pullStatus() {
-        this.socket.emit('pull_status', this.projectName);
+        if (this.projectName !== null) {
+            this.socket.emit('pull_status', this.projectName);
+        }
     }
 
     register(event, callback) {
