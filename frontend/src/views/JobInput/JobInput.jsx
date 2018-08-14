@@ -111,6 +111,7 @@ class JobInput extends React.Component {
   render () {
     if (api.projectName === null) {
       return (<div>
+        No project exists. Please click "Create Project".
       </div>)
     }
     const { classes } = this.props;

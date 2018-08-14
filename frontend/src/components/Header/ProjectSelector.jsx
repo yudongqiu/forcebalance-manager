@@ -7,7 +7,7 @@ import ListSubheader from '@material-ui/core/ListSubheader';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 
-import Flag from '@material-ui/icons/Flag';
+import Album from '@material-ui/icons/Album';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 
 import CreateProjectDialog from "./CreateProjectDialog";
@@ -37,12 +37,6 @@ class ProjectSelector extends React.Component {
     api.listProjects(this.updateProjects);
   }
 
-  componentDidUpdate(prevProps) {
-    if (this.props.projectName !== prevProps.projectName) {
-      api.listProjects(this.updateProjects);
-    }
-  }
-
   updateProjects = (projects) => {
     this.setState({
       projects: projects
@@ -59,6 +53,7 @@ class ProjectSelector extends React.Component {
     this.setState({
       anchorEl: event.currentTarget
     });
+    api.listProjects(this.updateProjects);
   }
 
   handleCloseMenu = () => {
@@ -88,6 +83,7 @@ class ProjectSelector extends React.Component {
       DialogOpen: false,
       anchorEl: null,
     });
+    api.listProjects(this.updateProjects);
   }
 
   render() {
@@ -100,7 +96,6 @@ class ProjectSelector extends React.Component {
         </span>
       );
     } else {
-
       return (
         <span>
           <Button onClick={this.handleClick}> {this.props.projectName} </Button>
@@ -118,10 +113,10 @@ class ProjectSelector extends React.Component {
                 onClick={(event) => this.handleMenuItemClick(event, index)}
               >
                 <ListItemText primary={proj.projectName} />
-                <ListItemIcon><Flag style={{color:statusIconColor[proj.status]}}/></ListItemIcon>
+                <ListItemIcon><Album style={{color:statusIconColor[proj.status]}}/></ListItemIcon>
               </MenuItem>
             ))}
-            <ListSubheader>Create New</ListSubheader>
+            <ListSubheader>New Project</ListSubheader>
             <MenuItem
               key="Create Project"
               onClick={this.handleOpenDialog}

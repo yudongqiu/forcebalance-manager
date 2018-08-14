@@ -39,7 +39,9 @@ class ForceBalanceAPI {
     }
 
     getInputParams(callback) {
-        this.socket.emit('get_input_params', this.projectName, (data) => {callback(data)});
+        if (this.projectName !== null) {
+            this.socket.emit('get_input_params', this.projectName, (data) => {callback(data)});
+        }
     }
 
     launchOptimizer() {
