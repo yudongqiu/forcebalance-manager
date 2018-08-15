@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import threading
 
 class FBProject(object):
     project_status = {'idle': 0, 'running':1, 'finished': 2, 'error': 3}
@@ -22,6 +23,7 @@ class FBProject(object):
         self.status = self.project_status['idle']
         self._options = dict()
         self._manager = None
+        self.lock = threading.Lock()
 
     def register_manager(self, manager):
         self._manager = manager
@@ -48,8 +50,13 @@ class FBProject(object):
 
     def launch_optimizer(self):
         self.update_status('running')
-        time.sleep(5)
-        self.update_status('finished')
+        t = threading.Thread(target=self.exec_launch_optimizer)
+        t.start()
+
+    def exec_launch_optimizer(self):
+        with self.lock:
+            time.sleep(5)
+            self.update_status('finished')
 
     def update_status(self, statusName):
         assert self._manager is not None, 'This project has not been connected to a manager yet'

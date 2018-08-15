@@ -22,6 +22,7 @@ import CardBody from "components/Card/CardBody.jsx";
 import CardFooter from "components/Card/CardFooter.jsx";
 
 import api from "../../api";
+import { RunningStatus } from "../../constants";
 
 
 const styles = {
@@ -77,6 +78,7 @@ class JobInput extends React.Component {
   componentDidMount() {
     api.onChangeProjectName(this.update);
     this.update();
+    api.register('update_status', this.updateStatus);
   }
 
   update = () => {
@@ -85,6 +87,12 @@ class JobInput extends React.Component {
 
   updateParams = (data) => {
     this.setState(data);
+  }
+
+  updateStatus = (data) => {
+    this.setState({
+      status: data.status
+    });
   }
 
   handleChange = event => {
@@ -309,7 +317,11 @@ class JobInput extends React.Component {
               </CardBody>
               <CardFooter>
                 <Button color="primary" onClick={this.resetOptimizer}>Reset</Button>
-                <Button color="info" onClick={this.launchOptimizer}>Launch Optimizer</Button>
+                <Button
+                  color="info"
+                  onClick={this.launchOptimizer}
+                  disabled={this.state.status === RunningStatus.running}
+                >Launch Optimizer</Button>
               </CardFooter>
             </Card>
           </GridItem>

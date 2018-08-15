@@ -3,14 +3,7 @@ import React from "react";
 import Button from "components/CustomButtons/Button.jsx";
 
 import api from "../../api";
-
-const RunningStatus = {
-  idle: 0,
-  running: 1,
-  finished: 2,
-  error: 3,
-  noConnection: 4,
-}
+import { RunningStatus } from "../../constants";
 
 class StatusButton extends React.Component {
   constructor(props) {

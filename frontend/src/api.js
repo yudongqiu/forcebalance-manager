@@ -65,7 +65,7 @@ class ForceBalanceAPI {
     register(event, callback) {
         if (event in this.eventCallbacks) {
             // append this callback function only if it does not exist yet
-            if (this.eventCallbacks[event].indexOf(callback) !== -1) {
+            if (this.eventCallbacks[event].indexOf(callback) === -1) {
                 this.eventCallbacks[event].push(callback);
             }
         } else {
