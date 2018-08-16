@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import threading
+import os
 
 class FBProject(object):
     project_status = {'idle': 0, 'running':1, 'finished': 2, 'error': 3}
@@ -24,9 +25,30 @@ class FBProject(object):
         self._options = dict()
         self._manager = None
         self.lock = threading.Lock()
+        self.project_folder = None
 
     def register_manager(self, manager):
         self._manager = manager
+
+    def create_project_folder(self, project_folder):
+        assert not os.path.exists(project_folder)
+        os.makedirs(project_folder)
+        self.project_folder = project_folder
+
+    def load_from_project_folder(self, project_folder):
+        """ Load the project data from the project folder """
+        pass
+
+    def setup_forcefield(self, data):
+        assert self.project_folder, 'project_folder is not setup correctly'
+        ff_folder = os.path.join(self.project_folder, 'forcefield')
+        if not os.path.exists(ff_folder):
+            os.makedirs(ff_folder)
+        filename = data['fileName']
+        with open(os.path.join(ff_folder, filename), 'wb') as byte_f:
+            byte_f.write(data['fileData'])
+
+
 
     def get_input_params(self):
         """ Info for frontend JobInput.jsx """

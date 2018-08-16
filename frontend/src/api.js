@@ -62,6 +62,15 @@ class ForceBalanceAPI {
         }
     }
 
+    uploadForceFieldFile(file) {
+        this.socket.emit('upload_ff_file', this.projectName, {
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            fileData: file
+        });
+    }
+
     register(event, callback) {
         if (event in this.eventCallbacks) {
             // append this callback function only if it does not exist yet

@@ -67,3 +67,7 @@ __pycache__/
 
 # Mac
 __MACOSX
+
+# projects
+
+projects/

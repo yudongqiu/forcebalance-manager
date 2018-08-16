@@ -31,7 +31,15 @@ class FBNamespace(Namespace):
         self._manager.update_status(projectName)
 
     def on_get_input_params(self, projectName):
+        print(f"socketIO: Received command get_input_params for project <{projectName}>")
         return self._manager.get_input_params(projectName)
+
+    def on_upload_ff_file(self, projectName, data):
+        print(f"socketIO: Received upload_ff_file command for project {projectName}")
+        print(f"  file name: {data['fileName']}")
+        print(f"  file type: {data['fileType']}")
+        print(f"  file size: {data['fileSize']}")
+        return self._manager.upload_ff_file(projectName, data)
 
 fb_ns = FBNamespace('/api')
 

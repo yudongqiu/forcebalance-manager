@@ -10,13 +10,21 @@ import IconButton from '@material-ui/core/IconButton';
 import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
+import Card from '@material-ui/core/Card';
+import CardActions from '@material-ui/core/CardActions';
+import CardContent from '@material-ui/core/CardContent';
+import Stepper from '@material-ui/core/Stepper';
+import Step from '@material-ui/core/Step';
+import StepLabel from '@material-ui/core/StepLabel';
+import StepButton from '@material-ui/core/StepButton';
+import StepContent from '@material-ui/core/StepContent';
 // @material-ui/icons
 import FileUpload from "@material-ui/icons/FileUpload";
 // core components
 import GridItem from "components/Grid/GridItem.jsx";
 import CustomInput from "components/CustomInput/CustomInput.jsx";
 import Button from "components/CustomButtons/Button.jsx";
-import Card from "components/Card/Card.jsx";
+// import Card from "components/Card/Card.jsx";
 import CardHeader from "components/Card/CardHeader.jsx";
 import CardBody from "components/Card/CardBody.jsx";
 import CardFooter from "components/Card/CardFooter.jsx";
@@ -65,6 +73,9 @@ const styles = {
 
 class JobInput extends React.Component {
   state = {
+    activeStep: 0,
+    completed: {},
+    fileName: '',
     jobType: 'optimize',
     maxStep: 100,
     penType: 'L2',
@@ -99,13 +110,18 @@ class JobInput extends React.Component {
     this.setState({ [event.target.name]: event.target.value });
   }
 
-  selectFile = event => {
+  selectForceFieldFile = event => {
     const file = event.target.files[0];
     if (file) {
       this.setState({
         fileName: file.name,
+        ffFile: file,
       });
     }
+  }
+
+  uploadForceFieldFile = () => {
+    api.uploadForceFieldFile(this.state.ffFile);
   }
 
   resetOptimizer = () => {
@@ -116,41 +132,27 @@ class JobInput extends React.Component {
     api.launchOptimizer();
   }
 
+  handleStep = step => () => {
+    this.setState({
+      activeStep: step,
+    });
+  };
+
+  isStepComplete(step) {
+    return this.state.completed.has(step);
+  }
+
   render () {
     if (api.projectName === null) {
       return (<div>
         No project exists. Please click "Create Project".
       </div>)
     }
+    const { activeStep } = this.state;
     const { classes } = this.props;
     const inputForm = (
       <div>
         <Grid container>
-            <GridItem xs={12} sm={12} md={5}>
-              <CustomInput
-                labelText="Input Force Field File"
-                id="force-field-file"
-                formControlProps={{
-                  fullWidth: true
-                }}
-                inputProps={{
-                  value: this.state.fileName,
-                  placeholder: "Click Upload Button",
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <input type="file" id="file-upload" className={classes.input} onChange={this.selectFile} />
-                      <label htmlFor="file-upload">
-                        <IconButton component="span">
-                          <FileUpload />
-                        </IconButton>
-                      </label>
-                    </InputAdornment>
-                  ),
-                  error: !this.state.fileName
-                }}
-
-              />
-            </GridItem>
             <GridItem xs={12} sm={12} md={4}>
               <FormControl fullWidth={true} className={classes.formControl} >
                 <InputLabel htmlFor="job-type" className={classes.labelRoot} >Job Type</InputLabel>
@@ -305,27 +307,83 @@ class JobInput extends React.Component {
     )
     return (
       <div>
-        <Grid container>
-          <GridItem xs={12} sm={12} md={8}>
-            <Card>
-              <CardHeader color="primary">
-                <h4 className={classes.cardTitleWhite}>Job Input</h4>
-                <p className={classes.cardCategoryWhite}>Water Surface Tension</p>
-              </CardHeader>
-              <CardBody>
-                {inputForm}
-              </CardBody>
-              <CardFooter>
-                <Button color="primary" onClick={this.resetOptimizer}>Reset</Button>
-                <Button
-                  color="info"
-                  onClick={this.launchOptimizer}
-                  disabled={this.state.status === RunningStatus.running}
-                >Launch Optimizer</Button>
-              </CardFooter>
-            </Card>
-          </GridItem>
-        </Grid>
+        <Stepper activeStep={activeStep} orientation="vertical">
+          <Step>
+            <StepButton
+              onClick={this.handleStep(0)}
+            >
+              Initial ForceField
+            </StepButton>
+            <StepContent>
+              <Card>
+                <CardContent>
+                  <CustomInput
+                    labelText="Input Force Field File"
+                    id="force-field-file"
+                    formControlProps={{
+                      fullWidth: true
+                    }}
+                    inputProps={{
+                      value: this.state.fileName,
+                      placeholder: "Click Upload Button",
+                      onChange: null,
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <input type="file" id="file-upload" className={classes.input} onChange={this.selectForceFieldFile} />
+                          <label htmlFor="file-upload">
+                            <IconButton component="span">
+                              <FileUpload />
+                            </IconButton>
+                          </label>
+                        </InputAdornment>
+                      ),
+                      error: !this.state.fileName
+                    }}
+                  />
+                  <Button color="primary" onClick={this.uploadForceFieldFile}>Upload</Button>
+                </CardContent>
+              </Card>
+            </StepContent>
+          </Step>
+          <Step>
+            <StepButton
+              onClick={this.handleStep(1)}
+              disabled={false}
+            >
+              Targets
+            </StepButton>
+            <StepContent>
+              <Card>
+                Targets
+              </Card>
+            </StepContent>
+          </Step>
+          <Step>
+            <StepButton
+              onClick={this.handleStep(2)}
+              disabled={false}
+            >
+              Optimizer
+            </StepButton>
+            <StepContent>
+              <Card>
+                <CardContent>
+                  {inputForm}
+                </CardContent>
+                <CardActions>
+                  <Button color="primary" onClick={this.resetOptimizer}>Reset</Button>
+                  <Button
+                    color="info"
+                    onClick={this.launchOptimizer}
+                    disabled={this.state.status === RunningStatus.running}
+                  >
+                    Launch Optimizer
+                  </Button>
+                  </CardActions>
+              </Card>
+            </StepContent>
+          </Step>
+        </Stepper>
       </div>
     );
   }

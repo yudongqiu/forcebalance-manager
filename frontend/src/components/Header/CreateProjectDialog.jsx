@@ -12,7 +12,7 @@ export default class CreateProjectDialog extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      text: 'New Project',
+      text: 'project1',
       projectNames: [],
     }
   }
