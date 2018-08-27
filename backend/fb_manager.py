@@ -20,6 +20,7 @@ class FBManager:
             print(f"Found existing project at <{pfolder}>")
             project = FBProject(projectName)
             project.load_from_project_folder(pfolder)
+            project.register_manager(self)
             self._projects[projectName] = project
 
     def create_project(self, projectName):
@@ -28,7 +29,7 @@ class FBManager:
         project.register_manager(self)
         projectFolder = os.path.join(self.root, projectName)
         project.create_project_folder(projectFolder)
-        self._projects[projectName]  = project
+        self._projects[projectName] = project
 
     def list_projects(self):
         return [{'projectName': p.name, 'status': p.status} for p in self._projects.values()]
@@ -56,6 +57,14 @@ class FBManager:
     def upload_ff_file(self, projectName, data):
         project = self._projects[projectName]
         return project.setup_forcefield(data)
+
+    def get_forcefield_info(self, projectName):
+        project = self._projects[projectName]
+        return project.get_forcefield_info()
+
+    def set_forcefield_prior_rules(self, projectName, data):
+        project = self._projects[projectName]
+        return project.set_forcefield_prior_rules(data)
 
 
 manager = FBManager()

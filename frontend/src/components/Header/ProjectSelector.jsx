@@ -34,6 +34,10 @@ class ProjectSelector extends React.Component {
   }
 
   componentDidMount() {
+    api.register('update_status', this.update);
+  }
+
+  update = () => {
     api.listProjects(this.updateProjects);
   }
 
@@ -53,7 +57,7 @@ class ProjectSelector extends React.Component {
     this.setState({
       anchorEl: event.currentTarget
     });
-    api.listProjects(this.updateProjects);
+    this.update();
   }
 
   handleCloseMenu = () => {
@@ -83,7 +87,6 @@ class ProjectSelector extends React.Component {
       DialogOpen: false,
       anchorEl: null,
     });
-    api.listProjects(this.updateProjects);
   }
 
   render() {

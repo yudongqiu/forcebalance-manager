@@ -41,6 +41,14 @@ class FBNamespace(Namespace):
         print(f"  file size: {data['fileSize']}")
         return self._manager.upload_ff_file(projectName, data)
 
+    def on_get_forcefield_info(self, projectName):
+        print(f"socketIO: Received upload_ff_file command for project {projectName}")
+        return self._manager.get_forcefield_info(projectName)
+
+    def on_set_forcefield_prior_rules(self, projectName, data):
+        print(f"socketIO: Received set_forcefield_prior_rules command for project {projectName}")
+        return self._manager.set_forcefield_prior_rules(projectName, data)
+
 fb_ns = FBNamespace('/api')
 
 socketio.on_namespace(fb_ns)

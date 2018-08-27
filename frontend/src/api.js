@@ -63,12 +63,26 @@ class ForceBalanceAPI {
     }
 
     uploadForceFieldFile(file) {
-        this.socket.emit('upload_ff_file', this.projectName, {
-            fileName: file.name,
-            fileType: file.type,
-            fileSize: file.size,
-            fileData: file
-        });
+        if (this.projectName !== null) {
+            this.socket.emit('upload_ff_file', this.projectName, {
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                fileData: file
+            });
+        }
+    }
+
+    getForceFieldInfo(callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_forcefield_info', this.projectName, (data) => {callback(data)});
+        }
+    }
+
+    uploadPriorRules(rules) {
+        if (this.projectName !== null) {
+            this.socket.emit('set_forcefield_prior_rules', this.projectName, rules);
+        }
     }
 
     register(event, callback) {

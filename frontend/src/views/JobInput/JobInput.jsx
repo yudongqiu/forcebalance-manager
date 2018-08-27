@@ -5,8 +5,6 @@ import withStyles from "@material-ui/core/styles/withStyles";
 import Grid from "@material-ui/core/Grid";
 import Input from "@material-ui/core/Input";
 import InputLabel from "@material-ui/core/InputLabel";
-import InputAdornment from '@material-ui/core/InputAdornment';
-import IconButton from '@material-ui/core/IconButton';
 import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
@@ -18,28 +16,28 @@ import Step from '@material-ui/core/Step';
 import StepLabel from '@material-ui/core/StepLabel';
 import StepButton from '@material-ui/core/StepButton';
 import StepContent from '@material-ui/core/StepContent';
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
 // @material-ui/icons
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import FileUpload from "@material-ui/icons/FileUpload";
 // core components
 import GridItem from "components/Grid/GridItem.jsx";
 import CustomInput from "components/CustomInput/CustomInput.jsx";
 import Button from "components/CustomButtons/Button.jsx";
-// import Card from "components/Card/Card.jsx";
-import CardHeader from "components/Card/CardHeader.jsx";
-import CardBody from "components/Card/CardBody.jsx";
-import CardFooter from "components/Card/CardFooter.jsx";
+import Table from "components/Table/Table.jsx";
+import FFInput from "./FFInput";
 
 import api from "../../api";
 import { RunningStatus } from "../../constants";
+
 
 
 const styles = {
   root: {
     display: 'flex',
     flexWrap: 'wrap',
-  },
-  input: {
-    display: 'none',
   },
   formControl: {
     paddingBottom: "10px",
@@ -75,7 +73,6 @@ class JobInput extends React.Component {
   state = {
     activeStep: 0,
     completed: {},
-    fileName: '',
     jobType: 'optimize',
     maxStep: 100,
     penType: 'L2',
@@ -110,20 +107,6 @@ class JobInput extends React.Component {
     this.setState({ [event.target.name]: event.target.value });
   }
 
-  selectForceFieldFile = event => {
-    const file = event.target.files[0];
-    if (file) {
-      this.setState({
-        fileName: file.name,
-        ffFile: file,
-      });
-    }
-  }
-
-  uploadForceFieldFile = () => {
-    api.uploadForceFieldFile(this.state.ffFile);
-  }
-
   resetOptimizer = () => {
     api.resetOptimizer();
   }
@@ -148,7 +131,7 @@ class JobInput extends React.Component {
         No project exists. Please click "Create Project".
       </div>)
     }
-    const { activeStep } = this.state;
+    const { activeStep, status} = this.state;
     const { classes } = this.props;
     const inputForm = (
       <div>
@@ -312,37 +295,10 @@ class JobInput extends React.Component {
             <StepButton
               onClick={this.handleStep(0)}
             >
-              Initial ForceField
+              Input ForceField
             </StepButton>
             <StepContent>
-              <Card>
-                <CardContent>
-                  <CustomInput
-                    labelText="Input Force Field File"
-                    id="force-field-file"
-                    formControlProps={{
-                      fullWidth: true
-                    }}
-                    inputProps={{
-                      value: this.state.fileName,
-                      placeholder: "Click Upload Button",
-                      onChange: null,
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <input type="file" id="file-upload" className={classes.input} onChange={this.selectForceFieldFile} />
-                          <label htmlFor="file-upload">
-                            <IconButton component="span">
-                              <FileUpload />
-                            </IconButton>
-                          </label>
-                        </InputAdornment>
-                      ),
-                      error: !this.state.fileName
-                    }}
-                  />
-                  <Button color="primary" onClick={this.uploadForceFieldFile}>Upload</Button>
-                </CardContent>
-              </Card>
+              <FFInput status={status}/>
             </StepContent>
           </Step>
           <Step>
@@ -375,7 +331,7 @@ class JobInput extends React.Component {
                   <Button
                     color="info"
                     onClick={this.launchOptimizer}
-                    disabled={this.state.status === RunningStatus.running}
+                    disabled={status === RunningStatus.running}
                   >
                     Launch Optimizer
                   </Button>
