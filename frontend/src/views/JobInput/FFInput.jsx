@@ -32,6 +32,10 @@ const styles = {
   input: {
     display: 'none',
   },
+  title: {
+    marginBottom: 16,
+    fontSize: 14,
+  },
 };
 
 class FFInput extends React.Component {
@@ -132,6 +136,7 @@ class FFInput extends React.Component {
 
     return (<Card>
       <CardContent>
+        <div className={classes.title}>Upload a force field file and enter prior rules</div>
         <CustomInput
           labelText="Input Force Field File"
           id="force-field-file"

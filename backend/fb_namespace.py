@@ -30,10 +30,6 @@ class FBNamespace(Namespace):
         print(f"socketIO: Received pull_status command for project {projectName}")
         self._manager.update_status(projectName)
 
-    def on_get_input_params(self, projectName):
-        print(f"socketIO: Received command get_input_params for project <{projectName}>")
-        return self._manager.get_input_params(projectName)
-
     def on_upload_ff_file(self, projectName, data):
         print(f"socketIO: Received upload_ff_file command for project {projectName}")
         print(f"  file name: {data['fileName']}")
@@ -48,6 +44,34 @@ class FBNamespace(Namespace):
     def on_set_forcefield_prior_rules(self, projectName, data):
         print(f"socketIO: Received set_forcefield_prior_rules command for project {projectName}")
         return self._manager.set_forcefield_prior_rules(projectName, data)
+
+    def on_create_fitting_target(self, projectName, data):
+        print(f"socketIO: Received create_fitting_target command for project {projectName}")
+        return self._manager.create_fitting_target(projectName, data)
+
+    def on_delete_fitting_target(self, projectName, targetName):
+        print(f"socketIO: Received delete_fitting_target command for project {projectName} target <{targetName}>")
+        return self._manager.delete_fitting_target(projectName, targetName)
+
+    def on_get_target_names(self, projectName):
+        print(f"socketIO: Received command get_target_names for project <{projectName}>")
+        return self._manager.get_target_names(projectName)
+
+    def on_get_target_options(self, projectName, targetName):
+        print(f"socketIO: Received command get_target_options for project <{projectName}> target <{targetName}>")
+        return self._manager.get_target_options(projectName, targetName)
+
+    def on_set_target_options(self, projectName, targetName, targetOptions):
+        print(f"socketIO: Received command set_target_options for project <{projectName}> target <{targetName}>")
+        return self._manager.set_target_options(projectName, targetName, targetOptions)
+
+    def on_get_optimizer_options(self, projectName):
+        print(f"socketIO: Received command get_optimizer_options for project <{projectName}>")
+        return self._manager.get_optimizer_options(projectName)
+
+    def on_set_optimizer_options(self, projectName, optimizerOptions):
+        print(f"socketIO: Received command set_optimizer_options for project <{projectName}>")
+        return self._manager.set_optimizer_options(projectName, optimizerOptions)
 
 fb_ns = FBNamespace('/api')
 

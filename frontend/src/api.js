@@ -85,6 +85,53 @@ class ForceBalanceAPI {
         }
     }
 
+    createFittingTarget(targetName, targetType, files) {
+        if (this.projectName !== null) {
+            this.socket.emit('create_fitting_target', this.projectName, {
+                targetName: targetName,
+                targetType: targetType,
+                fileNames: files.map(f => {return f.name}),
+                fileDatas: files
+            });
+        }
+    }
+
+    getTargetNames(callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_target_names', this.projectName, (data) => {callback(data)});
+        }
+    }
+
+    getTargetOptions(targetName, callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_target_options', this.projectName, targetName, (data) => {callback(data)});
+        }
+    }
+
+    setTargetOptions(targetName, targetOptions) {
+        if (this.projectName !== null) {
+            this.socket.emit('set_target_options', this.projectName, targetName, targetOptions);
+        }
+    }
+
+    deleteFittingTarget(targetName) {
+        if (this.projectName !== null) {
+            this.socket.emit('delete_fitting_target', this.projectName, targetName);
+        }
+    }
+
+    getOptimizerOptions(callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_optimizer_options', this.projectName, (data) => {callback(data)});
+        }
+    }
+
+    setOptimizerOptions(optimizerOptions) {
+        if (this.projectName !== null) {
+            this.socket.emit('set_optimizer_options', this.projectName, optimizerOptions);
+        }
+    }
+
     register(event, callback) {
         if (event in this.eventCallbacks) {
             // append this callback function only if it does not exist yet

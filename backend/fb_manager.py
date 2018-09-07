@@ -66,6 +66,33 @@ class FBManager:
         project = self._projects[projectName]
         return project.set_forcefield_prior_rules(data)
 
+    def create_fitting_target(self, projectName, data):
+        project = self._projects[projectName]
+        return project.create_fitting_target(data)
+
+    def delete_fitting_target(self, projectName, targetName):
+        project = self._projects[projectName]
+        return project.delete_fitting_target(targetName)
+
+    def get_target_names(self, projectName):
+        project = self._projects[projectName]
+        return project.get_target_names()
+
+    def get_target_options(self, projectName, targetName):
+        project = self._projects[projectName]
+        return project.get_target_options(targetName)
+
+    def set_target_options(self, projectName, targetName, targetOptions):
+        project = self._projects[projectName]
+        return project.set_target_options(targetName, targetOptions)
+
+    def get_optimizer_options(self, projectName):
+        project = self._projects[projectName]
+        return project.get_optimizer_options()
+
+    def set_optimizer_options(self, projectName, optimizerOptions):
+        project = self._projects[projectName]
+        return project.set_optimizer_options(optimizerOptions)
 
 manager = FBManager()
 manager.load_existing_projects()

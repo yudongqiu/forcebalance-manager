@@ -32,6 +32,20 @@ class FBProject(object):
         self.project_folder = None
         self.ff_folder = 'forcefield'
         self.conf_folder = 'config'
+        self.targets_folder = 'targets'
+        self.fb_targets = dict()
+        # some default optimizer options that matches forcebalance.parser.gen_opts_types
+        self.optimizer_options = {
+            'jobtype': 'newton',
+            'maxstep': 10,
+            'penalty_type': 'L2',
+            'convergence_objective': 1e-4,
+            'convergence_step': 1e-4,
+            'convergence_gradient': 1e-3,
+            'trust0': 0.1,
+            'finite_difference_h': 1e-3,
+        }
+        self.input_filename = 'input.in'
 
     def register_manager(self, manager):
         """ Register the FBmanager instance for callback functions """
@@ -55,6 +69,10 @@ class FBProject(object):
             self.force_field = forcebalance.forcefield.FF(self.ff_options)
             # load priors
             self.load_ff_prior()
+            # load fb_targets
+            self.load_fb_targets()
+            # load optimizer_options
+            self.load_optimizer_options()
 
     def setup_forcefield(self, data):
         """ Setup self.force_field """
@@ -119,34 +137,161 @@ class FBProject(object):
         self.save_ff_prior()
         return 0
 
-
-    def get_input_params(self):
-        """ Info for frontend JobInput.jsx """
-        return {
-            'projectName': self.name,
-            'jobType': 'Single',
+    def create_fitting_target(self, data):
+        """ Add a fitting target to this project """
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        # make sure we're at the project folder
+        os.chdir(self.project_folder)
+        # create the "targets" folder if not exist
+        if not os.path.exists(self.targets_folder):
+            os.mkdir(self.targets_folder)
+        # create a new folder for the target
+        target_name = data['targetName']
+        target_type = data['targetType']
+        target_folder = os.path.join(self.targets_folder, target_name)
+        os.mkdir(target_folder)
+        # write the uploaded file in this folder
+        for fname, fdata in zip(data['fileNames'], data['fileDatas']):
+            with open(os.path.join(target_folder, fname), 'wb') as byte_f:
+                byte_f.write(fdata)
+        assert target_name not in self.fb_targets, f'Target {target_name} already exists!'
+        # use default options of each type
+        default_target_options = {
+            'ABINITIO_GMX': {
+                'energy': True,
+                'force': True,
+                'w_energy': 1.0,
+                'w_force': 1.0,
+            }
         }
+        target_options = default_target_options[target_type]
+        target_options.update({
+            'name': target_name,
+            'type': target_type,
+            'fileNames': data['fileNames'],
+        })
+        self.fb_targets[target_name] = target_options
+        self.save_fb_targets()
 
-    def load_fb_options(self, options):
-        pass
+    def delete_fitting_target(self, target_name):
+        """ Delete a fitting target from this project """
+        assert target_name in self.fb_targets, f'Target {target_name} not found'
+        self.fb_targets.pop(target_name)
+        self.save_fb_targets()
+        # remove the target folder
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        target_folder = os.path.join(self.targets_folder, target_name)
+        if os.path.exists(target_folder):
+            shutil.rmtree(target_folder)
+        else:
+            print("Warning! Deleting target {target_name} but folder not found.")
 
-    def load_forcefield(self, ff):
-        pass
+    def get_target_names(self):
+        return list(self.fb_targets.keys())
 
-    def create_objective(self):
-        self._objective = None
+    def get_target_options(self, target_name):
+        return self.fb_targets[target_name]
 
-    def create_optimizer(self):
-        self._optimizer = None
+    def set_target_options(self, target_name, options):
+        self.fb_targets[target_name].update(options)
+        # save target configure on disk
+        self.save_fb_targets()
+
+    def save_fb_targets(self):
+        """ Save the fb_targets as a JSON file """
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        if not os.path.exists(self.conf_folder):
+            os.mkdir(self.conf_folder)
+        targets_fn = os.path.join(self.conf_folder, 'fb_targets.json')
+        with open(targets_fn, 'w') as jfile:
+            json.dump(self.fb_targets, jfile, indent=4)
+        print(f"Targets of project <{self.name}> saved as {targets_fn}")
+
+    def load_fb_targets(self):
+        """ Load the fb_targets from JSON file """
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        targets_fn = os.path.join(self.conf_folder, 'fb_targets.json')
+        if os.path.exists(targets_fn):
+            with open(targets_fn) as jfile:
+                self.fb_targets = json.load(jfile)
+            # make sure each existing target has its own folder
+            assert os.path.exists(self.targets_folder), 'targets/ folder missing!'
+            assert set(os.listdir(self.targets_folder)) == set(self.fb_targets.keys()), 'targets/ folder contents does not match configure!'
+
+    def get_optimizer_options(self):
+        return self.optimizer_options
+
+    def set_optimizer_options(self, data):
+        self.optimizer_options.update(data)
+        self.save_optimizer_options()
+
+    def save_optimizer_options(self):
+        """ Save self.optimizer_options as a JSON file """
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        if not os.path.exists(self.conf_folder):
+            os.mkdir(self.conf_folder)
+        fn = os.path.join(self.conf_folder, 'optimizer_options.json')
+        with open(fn, 'w') as jfile:
+            json.dump(self.optimizer_options, jfile, indent=4)
+        print(f"Optimizer options of project <{self.name}> saved as {fn}")
+
+    def load_optimizer_options(self):
+        """ Load self.optimizer_options from a JSON file """
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        fn = os.path.join(self.conf_folder, 'optimizer_options.json')
+        if os.path.exists(fn):
+            with open(fn) as jfile:
+                self.optimizer_options = json.load(jfile)
+
+    def save_input_file(self):
+        # make sure we're in the project folder
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        # write the input file
+        with open(self.input_filename, 'w') as f:
+            f.write('$options\n')
+            for key, value in self.optimizer_options.items():
+                f.write(f"{key} {value}\n")
+            f.write('$end\n\n')
+            for tgt_opts in self.fb_targets.values():
+                f.write('$target\n')
+                for key, value in tgt_opts.items():
+                    f.write(f"{key} {value}\n")
+                f.write('$end\n\n')
 
     def launch_optimizer(self):
+        # make sure we're in the project folder
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        # build objective
+        target_options = []
+        for opt in self.fb_targets.values():
+            tgt_opt = forcebalance.parser.tgt_opts_defaults.copy()
+            tgt_opt.update(opt)
+            target_options.append(tgt_opt)
+        gen_options = forcebalance.parser.gen_opts_defaults.copy()
+        gen_options.update(self.optimizer_options)
+        gen_options['root'] = self.project_folder
+        gen_options['input_file'] = self.input_filename
+        self.objective = forcebalance.objective.Objective(gen_options, target_options, self.force_field)
+        self.optimizer = forcebalance.optimizer.Optimizer(gen_options, self.objective, self.force_field)
+        # generate input file for reproducibility
+        self.save_input_file()
+        # run optimizer
         self.update_status('running')
         t = threading.Thread(target=self.exec_launch_optimizer)
         t.start()
 
     def exec_launch_optimizer(self):
+        assert hasattr(self, 'optimizer'), 'self.optimizer not setup correctly'
         with self.lock:
             time.sleep(5)
+            self.optimizer.Run()
             self.update_status('finished')
 
     def update_status(self, statusName):

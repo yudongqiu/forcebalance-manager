@@ -29,7 +29,7 @@ class ProjectSelector extends React.Component {
       anchorEl: null,
       projects: [],
       projectValue: 0,
-      DialogOpen: false,
+      dialogOpen: false,
     }
   }
 
@@ -78,13 +78,13 @@ class ProjectSelector extends React.Component {
 
   handleOpenDialog = () => {
     this.setState({
-      DialogOpen: true,
+      dialogOpen: true,
     });
   }
 
   handleCloseDialog = () => {
     this.setState({
-      DialogOpen: false,
+      dialogOpen: false,
       anchorEl: null,
     });
   }
@@ -95,7 +95,7 @@ class ProjectSelector extends React.Component {
       return (
         <span>
           <Button onClick={this.handleOpenDialog}>Create Project</Button>
-          <CreateProjectDialog open={this.state.DialogOpen} onClose={this.handleCloseDialog} />
+          <CreateProjectDialog open={this.state.dialogOpen} onClose={this.handleCloseDialog} />
         </span>
       );
     } else {
@@ -128,7 +128,7 @@ class ProjectSelector extends React.Component {
               <ListItemIcon><AddCircleOutline /></ListItemIcon>
             </MenuItem>
           </Menu>
-          <CreateProjectDialog open={this.state.DialogOpen} onClose={this.handleCloseDialog} />
+          <CreateProjectDialog open={this.state.dialogOpen} onClose={this.handleCloseDialog} />
         </span>
       );
     }
