@@ -36,7 +36,7 @@ class FBProject(object):
         self.fb_targets = dict()
         # some default optimizer options that matches forcebalance.parser.gen_opts_types
         self.optimizer_options = {
-            'jobtype': 'newton',
+            'jobtype': 'NEWTON',
             'maxstep': 10,
             'penalty_type': 'L2',
             'convergence_objective': 1e-4,
@@ -45,7 +45,7 @@ class FBProject(object):
             'trust0': 0.1,
             'finite_difference_h': 1e-3,
         }
-        self.input_filename = 'input.in'
+        self.input_filename = 'fb.in'
 
     def register_manager(self, manager):
         """ Register the FBmanager instance for callback functions """
@@ -225,7 +225,12 @@ class FBProject(object):
         return self.optimizer_options
 
     def set_optimizer_options(self, data):
-        self.optimizer_options.update(data)
+        for key, value in self.optimizer_options.items():
+            if key in data:
+                try:
+                    self.optimizer_options[key] = type(value)(data[key])
+                except Exception as e:
+                    print(e)
         self.save_optimizer_options()
 
     def save_optimizer_options(self):
