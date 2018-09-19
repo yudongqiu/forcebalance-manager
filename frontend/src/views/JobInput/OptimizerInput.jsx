@@ -28,7 +28,14 @@ const styles = {
 class OptimizerInput extends React.Component {
   // the default options are on the backend when project is created
   state = {
-    jobtype: 'single',
+    jobtype: 'NEWTON',
+    maxstep: 10,
+    penalty_type: 'L2',
+    convergence_objective: 0.0001,
+    convergence_step: 0.0001,
+    convergence_gradient: 0.001,
+    trust0: 0.1,
+    finite_difference_h: 0.001,
   }
 
   componentDidMount() {
