@@ -174,7 +174,7 @@ class FFInput extends React.Component {
         {paramNames && paramNames.length > 0 ?
           <ExpansionPanel>
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-              Scaling Factor Rules
+              Prior Width Rules
             </ExpansionPanelSummary>
             <ExpansionPanelDetails>
               <Grid container>
@@ -228,7 +228,7 @@ class FFInput extends React.Component {
         {paramNames && paramNames.length > 0 ?
           <Table
             tableHeaderColor="primary"
-            tableHead={["#", "Parameter", "Value", "Scaling Factor"]}
+            tableHead={["#", "Parameter", "Value", "Prior Width"]}
             tableData={paramNames.map((name, index) => {
               return [(index+1).toString(), name, paramValues[index].toString(), paramPriors[index].toString()]
             })} />
