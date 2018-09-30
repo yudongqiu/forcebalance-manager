@@ -20,6 +20,13 @@ class ForceBalanceAPI {
         }
     }
 
+    removeOnChangeProjectName(callback) {
+        const idx = this.onChangeCallbacks.indexOf(callback);
+        if (idx !== -1) {
+            this.onChangeCallbacks.splice(idx, 1);
+        }
+    }
+
     setProject(name) {
         if (this.projectName !== name) {
             this.projectName = name;
@@ -59,6 +66,12 @@ class ForceBalanceAPI {
     pullStatus() {
         if (this.projectName !== null) {
             this.socket.emit('pull_status', this.projectName);
+        }
+    }
+
+    pullOptIter() {
+        if (this.projectName !== null) {
+            this.socket.emit('pull_opt_iter', this.projectName);
         }
     }
 
@@ -149,6 +162,16 @@ class ForceBalanceAPI {
                     })
                 }
             });
+        }
+    }
+
+    unregister(event, callback) {
+        if (event in this.eventCallbacks) {
+            // append this callback function only if it does not exist yet
+            const eventIdx = this.eventCallbacks[event].indexOf(callback);
+            if (eventIdx !== -1) {
+                this.eventCallbacks[event].splice(eventIdx, 1);
+            }
         }
     }
 }

@@ -71,6 +71,10 @@ class TargetInput extends React.Component {
     this.update();
   }
 
+  componentWillUnmount() {
+    api.removeOnChangeProjectName(this.update);
+  }
+
   update = () => {
     api.getTargetNames(this.updateTargetNames);
   }

@@ -4,6 +4,7 @@ import Person from "@material-ui/icons/Person";
 // core components/views
 import DashboardPage from "views/Dashboard/Dashboard.jsx";
 import JobInputPage from "views/JobInput/JobInput.jsx";
+import JobOutputPage from "views/JobOutput/JobOutput.jsx";
 
 const dashboardRoutes = [
   {
@@ -19,6 +20,13 @@ const dashboardRoutes = [
     navbarName: "Job Input",
     icon: Person,
     component: JobInputPage
+  },
+  {
+    path: "/output",
+    sidebarName: "Job Output",
+    navbarName: "Job Output",
+    icon: Person,
+    component: JobOutputPage
   },
   { redirect: true, path: "/", to: "/dashboard", navbarName: "Redirect" }
 ];

@@ -43,6 +43,10 @@ class OptimizerInput extends React.Component {
     this.update();
   }
 
+  componentWillUnmount() {
+    api.removeOnChangeProjectName(this.update);
+  }
+
   update = () => {
     api.getOptimizerOptions(this.updateOptimizerOptions);
   }

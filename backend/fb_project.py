@@ -46,6 +46,7 @@ class FBProject(object):
             'finite_difference_h': 1e-3,
         }
         self.input_filename = 'fb.in'
+        self.opt_iter = 0
 
     def register_manager(self, manager):
         """ Register the FBmanager instance for callback functions """
@@ -285,6 +286,8 @@ class FBProject(object):
         gen_options['input_file'] = self.input_filename
         self.objective = forcebalance.objective.Objective(gen_options, target_options, self.force_field)
         self.optimizer = forcebalance.optimizer.Optimizer(gen_options, self.objective, self.force_field)
+        # insert breakpoint in optimization iterations
+        self.optimizer.step = self.notify_me(self.optimizer.step, 'opt_step')
         # generate input file for reproducibility
         self.save_input_file()
         # run optimizer
@@ -295,9 +298,32 @@ class FBProject(object):
     def exec_launch_optimizer(self):
         assert hasattr(self, 'optimizer'), 'self.optimizer not setup correctly'
         with self.lock:
-            time.sleep(5)
+            # import sys
+            # stdout = sys.stdout
+            # stderr = sys.stderr
+            # with open('fb.out', 'w') as f:
+            #     sys.stdout = f
+            #     sys.stderr = f
+            #     self.optimizer.Run()
+            # sys.stdout = stdout
+            # sys.stderr = stderr
             self.optimizer.Run()
             self.update_status('finished')
+
+
+    def notify_me(self, func, msg):
+        """ Wrapper function to let self get notified when another function is called """
+        def f(*args, **kwargs):
+            self.notified(msg)
+            return func(*args, **kwargs)
+        return f
+
+    def notified(self, msg):
+        if msg == 'opt_step':
+            print(f"@@@@ Notified optimizer step {self.optimizer.iteration}")
+            self.update_opt_iter()
+        else:
+            print(f"@@@@ NOTIFIED by {msg}")
 
     def update_status(self, statusName):
         assert self._manager is not None, 'This project has not been connected to a manager yet'
@@ -307,3 +333,8 @@ class FBProject(object):
 
     def reset_optimizer(self):
         self.update_status('idle')
+
+    def update_opt_iter(self):
+        if hasattr(self, 'optimizer'):
+            self.opt_iter = self.optimizer.iteration
+        self._manager.update_opt_iter(self._name)

@@ -63,6 +63,11 @@ class JobInput extends React.Component {
     api.register('update_status', this.updateStatus);
   }
 
+  componentWillUnmount() {
+    api.removeOnChangeProjectName(this.update);
+    api.unregister('update_status', this.updateStatus);
+  }
+
   update = () => {
     api.getInputParams(this.updateParams);
   }
@@ -76,8 +81,6 @@ class JobInput extends React.Component {
       status: data.status
     });
   }
-
-
 
   resetOptimizer = () => {
     api.resetOptimizer();

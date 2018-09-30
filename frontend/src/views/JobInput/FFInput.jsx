@@ -64,6 +64,10 @@ class FFInput extends React.Component {
     this.update();
   }
 
+  componentWillUnmount() {
+    api.removeOnChangeProjectName(this.update);
+  }
+
   update = () => {
     api.getForceFieldInfo(this.updateForceFieldInfo);
   }
