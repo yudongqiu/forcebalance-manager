@@ -63,7 +63,7 @@ class JobOutput extends React.Component {
   }
 
   updateOptimizerState = (data) => {
-    if (data) {
+    if (Object.keys(data).length > 0) {
       if (this.state.currentIter) {
         this.setState({
           optimizerState: data,
@@ -120,6 +120,9 @@ class JobOutput extends React.Component {
               <GridItem xs={12} sm={12} md={12}>
                 <ObjectiveTable objdict={optimizerState[currentIter].objdict} />
               </GridItem>
+              <GridItem xs={12} sm={12} md={12}>
+                <GradientsTable data={optimizerState[currentIter].paramUpdates} />
+              </GridItem>
             </Grid>
           }
         </div>
@@ -152,6 +155,21 @@ function ObjectiveTable(props) {
       tableHead={["Target", "weight", "objective", "contribution"]}
       data={rows}
       title="Objective Breakdown"
+    />
+  );
+}
+
+function GradientsTable(props) {
+  const data = props.data;
+  const rows = [];
+  for (const pName in data) {
+    rows.push([pName, data[pName].gradient, data[pName].prev_pval, data[pName].pval]);
+  }
+  return (
+    <EnhancedTable
+      tableHead={["Parameter", "Gradient", "Prev", "New"]}
+      data={rows}
+      title="Parameter Updates"
     />
   );
 }

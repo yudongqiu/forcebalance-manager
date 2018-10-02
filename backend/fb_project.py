@@ -296,6 +296,8 @@ class FBProject(object):
         self.optimizer.writechk = self.notify_me(self.optimizer.writechk, 'writechk')
         # generate input file for reproducibility
         self.save_input_file()
+        # reset opt state
+        self.opt_state = dict()
         # run optimizer
         self.update_status('running')
         t = threading.Thread(target=self.exec_launch_optimizer)
@@ -336,10 +338,14 @@ class FBProject(object):
         if self.opt_iter not in self.opt_state:
             obj_dict = copy.deepcopy(self.objective.ObjDict)
             chk = copy.deepcopy(self.optimizer.chk)
+            pvals = self.force_field.create_pvals(chk['xk'])
+            p_names = self.force_field.plist
+            prev_pvals = self.force_field.pvals0 if self.opt_iter == 1 else [self.opt_state[self.opt_iter-1]['paramUpdates'][p]['pval'] for p in p_names]
+            param_updates = {p_name: {'gradient': g, 'prev_pval': prev_v, 'pval': v} for p_name, g, prev_v, v in zip(p_names, chk['G'], prev_pvals, pvals)}
             self.opt_state[self.opt_iter] = {
                 'iteration': self.opt_iter,
-                'gradients': dict(zip(self.force_field.plist, chk['G'])),
                 'objdict': obj_dict,
+                'paramUpdates': param_updates,
             }
             self.save_opt_state()
             # notify the frontend about opt_iter + 1

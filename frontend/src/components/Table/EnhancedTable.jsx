@@ -91,7 +91,7 @@ class EnhancedTableHead extends React.Component {
 EnhancedTableHead.propTypes = {
   onRequestSort: PropTypes.func.isRequired,
   order: PropTypes.string.isRequired,
-  orderBy: PropTypes.string.isRequired,
+  orderBy: PropTypes.number.isRequired,
   labels: PropTypes.array.isRequired,
 };
 
@@ -107,8 +107,9 @@ const styles = theme => ({
     overflowX: 'auto',
   },
   title: {
-    padding: "30px",
+    padding: "20px",
     flex: '0 0 auto',
+    backgroundColor: '#DDDDDD',
   },
 });
 
@@ -139,7 +140,7 @@ class EnhancedTable extends React.Component {
   };
 
   render() {
-    const { classes, data, title, tableHead } = this.props;
+    const { classes, data, title, tableHead, handleRowClick } = this.props;
     const { order, orderBy, page, rowsPerPage } = this.state;
     let emptyRows = rowsPerPage - Math.min(rowsPerPage, data.length - page * rowsPerPage);
     if (data.length <= rowsPerPage) emptyRows = 0;
@@ -147,7 +148,7 @@ class EnhancedTable extends React.Component {
       <Paper className={classes.root}>
         {title ?
           <div className={classes.title}>
-            <Typography variant="title" id="tableTitle">
+            <Typography variant="subheading">
               {title}
             </Typography>
           </div> : null
@@ -167,7 +168,7 @@ class EnhancedTable extends React.Component {
                   return (
                     <TableRow
                       hover
-                      onClick={event => this.props.handleRowClick(event, rd[0])}
+                      onClick={handleRowClick? (event => handleRowClick(event, rd[0])) : null}
                       key={rd[0]}
                     >
                     {rd.map((v,idx) => {
