@@ -73,10 +73,9 @@ class FBNamespace(Namespace):
         print(f"socketIO: Received command set_optimizer_options for project <{projectName}>")
         return self._manager.set_optimizer_options(projectName, optimizerOptions)
 
-    def on_pull_opt_iter(self, projectName):
-        """ Trigger from frontend to update the opt iter """
-        print(f"socketIO: Received pull_opt_status command for project {projectName}")
-        self._manager.update_opt_iter(projectName)
+    def on_get_optimizer_state(self, projectName):
+        print(f"socketIO: Received get_optimizer_state command for project {projectName}")
+        return self._manager.get_optimizer_state(projectName)
 
 
 fb_ns = FBNamespace('/api')

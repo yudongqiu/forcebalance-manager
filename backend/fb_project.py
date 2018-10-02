@@ -4,6 +4,7 @@ import threading
 import os
 import shutil
 import json
+import copy
 
 import forcebalance
 
@@ -46,7 +47,8 @@ class FBProject(object):
             'finite_difference_h': 1e-3,
         }
         self.input_filename = 'fb.in'
-        self.opt_iter = 0
+        self.opt_state = dict()
+        self.out_folder = 'outputs'
 
     def register_manager(self, manager):
         """ Register the FBmanager instance for callback functions """
@@ -74,6 +76,8 @@ class FBProject(object):
             self.load_fb_targets()
             # load optimizer_options
             self.load_optimizer_options()
+            # load previous opt_state
+            self.load_opt_state()
 
     def setup_forcefield(self, data):
         """ Setup self.force_field """
@@ -286,8 +290,10 @@ class FBProject(object):
         gen_options['input_file'] = self.input_filename
         self.objective = forcebalance.objective.Objective(gen_options, target_options, self.force_field)
         self.optimizer = forcebalance.optimizer.Optimizer(gen_options, self.objective, self.force_field)
-        # insert breakpoint in optimization iterations
-        self.optimizer.step = self.notify_me(self.optimizer.step, 'opt_step')
+        # make sure optimizer.writechk() function is called, and make a breakpoint to save an opt state
+        #self.optimizer.step = self.notify_me(self.optimizer.step, 'writechk')
+        self.optimizer.wchk_step = True
+        self.optimizer.writechk = self.notify_me(self.optimizer.writechk, 'writechk')
         # generate input file for reproducibility
         self.save_input_file()
         # run optimizer
@@ -298,18 +304,8 @@ class FBProject(object):
     def exec_launch_optimizer(self):
         assert hasattr(self, 'optimizer'), 'self.optimizer not setup correctly'
         with self.lock:
-            # import sys
-            # stdout = sys.stdout
-            # stderr = sys.stderr
-            # with open('fb.out', 'w') as f:
-            #     sys.stdout = f
-            #     sys.stderr = f
-            #     self.optimizer.Run()
-            # sys.stdout = stdout
-            # sys.stderr = stderr
             self.optimizer.Run()
             self.update_status('finished')
-
 
     def notify_me(self, func, msg):
         """ Wrapper function to let self get notified when another function is called """
@@ -319,9 +315,9 @@ class FBProject(object):
         return f
 
     def notified(self, msg):
-        if msg == 'opt_step':
-            print(f"@@@@ Notified optimizer step {self.optimizer.iteration}")
-            self.update_opt_iter()
+        if msg == 'writechk':
+            print(f"@@@@ Notified by optimizer.writechk()")
+            self.update_opt_state()
         else:
             print(f"@@@@ NOTIFIED by {msg}")
 
@@ -334,7 +330,39 @@ class FBProject(object):
     def reset_optimizer(self):
         self.update_status('idle')
 
-    def update_opt_iter(self):
-        if hasattr(self, 'optimizer'):
-            self.opt_iter = self.optimizer.iteration
-        self._manager.update_opt_iter(self._name)
+    def update_opt_state(self):
+        """ Update self.opt_iter and self.opt_state when notified by forcebalance """
+        self.opt_iter = self.optimizer.iteration
+        if self.opt_iter not in self.opt_state:
+            obj_dict = copy.deepcopy(self.objective.ObjDict)
+            chk = copy.deepcopy(self.optimizer.chk)
+            self.opt_state[self.opt_iter] = {
+                'iteration': self.opt_iter,
+                'gradients': dict(zip(self.force_field.plist, chk['G'])),
+                'objdict': obj_dict,
+            }
+            self.save_opt_state()
+            # notify the frontend about opt_iter + 1
+            self._manager.update_opt_state(self._name)
+
+    def save_opt_state(self):
+        """ Save current self.opt_state as a JSON file in outputs folder """
+        assert self.out_folder != None, 'self.out_folder not setup yet'
+        assert hasattr(self, 'opt_state'), 'self.opt_state not created yet'
+        os.chdir(self.project_folder)
+        if not os.path.exists(self.out_folder):
+            os.mkdir(self.out_folder)
+        fn = os.path.join(self.out_folder, 'opt_state.json')
+        with open(fn, 'w') as jfile:
+            json.dump(self.opt_state, jfile, indent=4)
+        print(f"opt_state of project <{self.name}> saved as {fn}")
+
+    def load_opt_state(self):
+        """ Load the opt_state from JSON file and set current iter """
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        fn = os.path.join(self.out_folder, 'opt_state.json')
+        if os.path.exists(fn):
+            with open(fn) as jfile:
+                self.opt_state = json.load(jfile)
+        self.opt_iter = len(self.opt_state)

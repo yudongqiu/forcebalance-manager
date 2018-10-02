@@ -9,8 +9,14 @@ import StepLabel from '@material-ui/core/StepLabel';
 import StepButton from '@material-ui/core/StepButton';
 import StepContent from '@material-ui/core/StepContent';
 import Button from '@material-ui/core/Button';
+import Grid from '@material-ui/core/Grid';
 // core components
-
+import GridItem from "components/Grid/GridItem.jsx";
+import Table from "components/Table/Table.jsx";
+import Card from "components/Card/Card.jsx";
+import CardHeader from "components/Card/CardHeader.jsx";
+import CardBody from "components/Card/CardBody.jsx";
+import EnhancedTable from "components/Table/EnhancedTable.jsx";
 // models
 import api from "../../api";
 import { RunningStatus } from "../../constants";
@@ -20,12 +26,15 @@ const styles = {
     width: '100%',
     overflow: 'auto',
   },
-  leftPane: {
+  leftPanel: {
     float: "left",
     width: "15%",
+    paddingTop: "5vh",
   },
-  rightPane: {
-    width: "90%",
+  rightPanel: {
+    float: 'right',
+    width: "85%",
+    maxWidth: "85%",
   },
   iterButton: {
     padding: "15px",
@@ -39,8 +48,8 @@ const styles = {
 
 class JobOutput extends React.Component {
   state = {
-    currentIter: 0,
-    lastIter: 0,
+    currentIter: null,
+    optimizerState: {},
   }
 
   handleClickIterButton = (e, iter) => {
@@ -49,33 +58,46 @@ class JobOutput extends React.Component {
     });
   }
 
-  updateOptIter = (data) => {
-    this.setState({
-      lastIter: data.lastIter,
-    });
+  update = () => {
+    api.getOptimizerState(this.updateOptimizerState);
   }
 
-  update = () => {
-    api.pullOptIter();
+  updateOptimizerState = (data) => {
+    if (data) {
+      if (this.state.currentIter) {
+        this.setState({
+          optimizerState: data,
+        })
+      } else {
+        this.setState({
+          currentIter: 1,
+          optimizerState: data,
+        })
+      }
+    }
   }
 
   componentDidMount() {
-    this.isCanceled = false;
     api.onChangeProjectName(this.update);
     this.update();
-    api.register('update_opt_iter', this.updateOptIter);
+    api.register('update_opt_state', this.update);
   }
 
   componentWillUnmount() {
     api.removeOnChangeProjectName(this.update);
-    api.unregister('update_opt_iter', this.updateOptIter);
+    api.unregister('update_opt_state', this.update);
   }
 
   render() {
     const { classes } = this.props;
-    const { currentIter, lastIter } = this.state;
+    const { currentIter, optimizerState } = this.state;
     const iterButtons = [];
-    for (let i=0; i<lastIter; i++) {
+    const iterations = [];
+    for (const d in optimizerState) {
+      iterations.push(optimizerState[d].iteration);
+    }
+    const lastIter = Math.max(...iterations);
+    for (let i = 1; i < lastIter + 1; i++) {
       iterButtons.push(
         <Button key={i}
           onClick={(e) => this.handleClickIterButton(e, i)}
@@ -87,12 +109,19 @@ class JobOutput extends React.Component {
     }
     return (
       <div className={classes.wrap}>
-        <div className={classes.leftPane}>
+        <div className={classes.leftPanel}>
           {iterButtons}
         </div>
-        <div className={classes.right}>
+        <div className={classes.rightPanel}>
           <p className={classes.title}>Iteration {currentIter}</p>
-          <p>Optimization running</p>
+          {(currentIter === null) ?
+            "Optimization running" :
+            <Grid>
+              <GridItem xs={12} sm={12} md={12}>
+                <ObjectiveTable objdict={optimizerState[currentIter].objdict} />
+              </GridItem>
+            </Grid>
+          }
         </div>
       </div>
     );
@@ -105,3 +134,24 @@ JobOutput.propTypes = {
 };
 
 export default withStyles(styles)(JobOutput);
+
+function ObjectiveTable(props) {
+  const objdict = props.objdict;
+  const rows = [];
+  for (const objName in objdict) {
+    const w = objdict[objName].w;
+    const x = objdict[objName].x;
+    if (objName !== 'Total') {
+      rows.push([objName, w, x, w*x]);
+    } else {
+      rows.push([objName, '', '', objdict[objName].toString()]);
+    }
+  }
+  return (
+    <EnhancedTable
+      tableHead={["Target", "weight", "objective", "contribution"]}
+      data={rows}
+      title="Objective Breakdown"
+    />
+  );
+}

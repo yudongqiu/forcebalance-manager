@@ -75,6 +75,12 @@ class ForceBalanceAPI {
         }
     }
 
+    getOptimizerState(callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_optimizer_state', this.projectName, (data) => {callback(data)});
+        }
+    }
+
     uploadForceFieldFile(file) {
         if (this.projectName !== null) {
             this.socket.emit('upload_ff_file', this.projectName, {

@@ -94,13 +94,16 @@ class FBManager:
         project = self._projects[projectName]
         return project.set_optimizer_options(optimizerOptions)
 
-    def update_opt_iter(self, projectName):
-        project = self._projects[projectName]
-        print(f"socketIO: updating project <{projectName}> status {project.status}")
-        fb_ns.emit('update_opt_iter', {
+    def update_opt_state(self, projectName):
+        """ trigger the frontend to pull new opt state """
+        print(f"socketIO: updating project <{projectName}> opt state")
+        fb_ns.emit('update_opt_state', {
             'projectName': projectName,
-            'lastIter': project.opt_iter,
         })
+
+    def get_optimizer_state(self, projectName):
+        project = self._projects[projectName]
+        return project.opt_state
 
 manager = FBManager()
 manager.load_existing_projects()
