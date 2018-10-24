@@ -1,0 +1,17 @@
+.ct-grid {
+    stroke: rgba(100, 100, 100, 0.3);
+    stroke-width: 1px;
+    stroke-dasharray: 2px;
+}
+
+.ct-series-a .ct-point, .ct-series-a .ct-line, .ct-series-a .ct-bar, .ct-series-a .ct-slice-donut {
+    stroke: rgba(70, 90, 100, 0.8);
+}
+
+.ct-axis-title {
+    stroke: rgba(10, 10, 10, 0.8);
+}
+
+.ct-label {
+    color: rgba(50, 50, 50, 0.9);
+}

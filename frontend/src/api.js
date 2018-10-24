@@ -151,6 +151,18 @@ class ForceBalanceAPI {
         }
     }
 
+    getOptimizeResults(callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_optimize_results', this.projectName, (data) => {callback(data)});
+        }
+    }
+
+    getFinalForceFieldInfo(callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_final_forcefield_info', this.projectName, (data) => {callback(data)});
+        }
+    }
+
     register(event, callback) {
         if (event in this.eventCallbacks) {
             // append this callback function only if it does not exist yet

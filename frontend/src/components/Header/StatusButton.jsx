@@ -24,6 +24,10 @@ class StatusButton extends React.Component {
     api.pullStatus();
   }
 
+  componentWillUnmount() {
+    api.unregister('update_status', this.updateStatus);
+  }
+
   componentDidUpdate(prevProps) {
     if (this.props.projectName !== prevProps.projectName) {
       api.pullStatus();

@@ -4,10 +4,14 @@ import PropTypes from 'prop-types';
 import withStyles from "@material-ui/core/styles/withStyles";
 import Stepper from '@material-ui/core/Stepper';
 import Step from '@material-ui/core/Step';
-import StepLabel from '@material-ui/core/StepLabel';
 import StepButton from '@material-ui/core/StepButton';
 import StepContent from '@material-ui/core/StepContent';
 import Button from '@material-ui/core/Button';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+import DialogTitle from '@material-ui/core/DialogTitle';
 // core components
 import FFInput from "./FFInput";
 import TargetInput from "./TargetInput";
@@ -55,12 +59,14 @@ class JobInput extends React.Component {
   state = {
     activeStep: 0,
     completed: {},
+    dialogOpen: false,
   }
 
   componentDidMount() {
     api.onChangeProjectName(this.update);
     this.update();
     api.register('update_status', this.updateStatus);
+    api.pullStatus();
   }
 
   componentWillUnmount() {
@@ -87,6 +93,9 @@ class JobInput extends React.Component {
   }
 
   launchOptimizer = () => {
+    this.setState({
+      status: RunningStatus.running,
+    })
     api.launchOptimizer();
   }
 
@@ -100,13 +109,30 @@ class JobInput extends React.Component {
     return this.state.completed.has(step);
   }
 
+  handleOpenDialog = () => {
+    this.setState({
+      dialogOpen: true,
+    })
+  }
+
+  handleCloseDialog = () => {
+    this.setState({
+      dialogOpen: false,
+    })
+  }
+
+  handleConfirmDialog = () => {
+    this.launchOptimizer();
+    this.handleCloseDialog();
+  }
+
   render () {
     if (api.projectName === null) {
       return (<div>
         No project exists. Please click "Create Project".
       </div>)
     }
-    const { activeStep, status} = this.state;
+    const { activeStep, status, dialogOpen } = this.state;
     const { classes } = this.props;
     return (
       <div>
@@ -147,11 +173,30 @@ class JobInput extends React.Component {
         <Button
           variant="contained"
           color='primary'
-          onClick={this.launchOptimizer}
+          onClick={status === RunningStatus.idle ? this.launchOptimizer : this.handleOpenDialog}
           disabled={status === RunningStatus.running}
         >
           Launch Optimizer
         </Button>
+        <Dialog
+          open={dialogOpen}
+          onClose={this.handleCloseDialog}
+        >
+          <DialogTitle>{"Rerun the optimizer?"}</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              A previous optimization exists. Rerun the optimizer will overwrite the previous results.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={this.handleCloseDialog} color="primary" autoFocus>
+              Cancel
+            </Button>
+            <Button onClick={this.handleConfirmDialog} color="primary">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
     );
   }

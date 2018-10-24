@@ -105,5 +105,13 @@ class FBManager:
         project = self._projects[projectName]
         return project.opt_state
 
+    def get_optimize_results(self, projectName):
+        project = self._projects[projectName]
+        return project.optimize_results
+
+    def get_final_forcefield_info(self, projectName):
+        project = self._projects[projectName]
+        return project.get_final_forcefield_info()
+
 manager = FBManager()
 manager.load_existing_projects()

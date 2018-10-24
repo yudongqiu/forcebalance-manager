@@ -91,7 +91,7 @@ class EnhancedTableHead extends React.Component {
 EnhancedTableHead.propTypes = {
   onRequestSort: PropTypes.func.isRequired,
   order: PropTypes.string.isRequired,
-  orderBy: PropTypes.number.isRequired,
+  orderBy: PropTypes.number,
   labels: PropTypes.array.isRequired,
 };
 
@@ -101,7 +101,7 @@ const styles = theme => ({
     marginTop: theme.spacing.unit * 3,
   },
   table: {
-    minWidth: 1020,
+    minWidth: 700,
   },
   tableWrapper: {
     overflowX: 'auto',
@@ -118,7 +118,7 @@ class EnhancedTable extends React.Component {
     order: 'asc',
     orderBy: null,
     page: 0,
-    rowsPerPage: 10,
+    rowsPerPage: 5,
   };
 
   handleRequestSort = (event, idx) => {
@@ -167,7 +167,7 @@ class EnhancedTable extends React.Component {
                 .map(rd => {
                   return (
                     <TableRow
-                      hover
+                      hover={handleRowClick}
                       onClick={handleRowClick? (event => handleRowClick(event, rd[0])) : null}
                       key={rd[0]}
                     >

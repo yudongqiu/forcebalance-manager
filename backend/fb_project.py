@@ -49,6 +49,9 @@ class FBProject(object):
         self.input_filename = 'fb.in'
         self.opt_state = dict()
         self.out_folder = 'outputs'
+        self.optimize_results = None
+        # following the rule of ForceBalance choosing where to put the result force field
+        self.result_folder = os.path.join('result', self.input_filename.split('.')[0])
 
     def register_manager(self, manager):
         """ Register the FBmanager instance for callback functions """
@@ -78,6 +81,10 @@ class FBProject(object):
             self.load_optimizer_options()
             # load previous opt_state
             self.load_opt_state()
+            # load status
+            self.load_status()
+            # load optimize results
+            self.load_optimize_results()
 
     def setup_forcefield(self, data):
         """ Setup self.force_field """
@@ -291,7 +298,6 @@ class FBProject(object):
         self.objective = forcebalance.objective.Objective(gen_options, target_options, self.force_field)
         self.optimizer = forcebalance.optimizer.Optimizer(gen_options, self.objective, self.force_field)
         # make sure optimizer.writechk() function is called, and make a breakpoint to save an opt state
-        #self.optimizer.step = self.notify_me(self.optimizer.step, 'writechk')
         self.optimizer.wchk_step = True
         self.optimizer.writechk = self.notify_me(self.optimizer.writechk, 'writechk')
         # generate input file for reproducibility
@@ -308,6 +314,7 @@ class FBProject(object):
         with self.lock:
             self.optimizer.Run()
             self.update_status('finished')
+            self.collect_optimize_results()
 
     def notify_me(self, func, msg):
         """ Wrapper function to let self get notified when another function is called """
@@ -327,7 +334,29 @@ class FBProject(object):
         assert self._manager is not None, 'This project has not been connected to a manager yet'
         assert statusName in self.project_status, f'Invalid statusName {statusName}'
         self.status = self.project_status[statusName]
+        self.save_status()
         self._manager.update_status(self._name)
+
+    def save_status(self):
+        """ Save current self.status as a JSON file in outputs folder """
+        assert self.out_folder != None, 'self.out_folder not setup yet'
+        assert hasattr(self, 'status'), 'self.status not created yet'
+        os.chdir(self.project_folder)
+        if not os.path.exists(self.out_folder):
+            os.mkdir(self.out_folder)
+        fn = os.path.join(self.out_folder, 'status.json')
+        with open(fn, 'w') as jfile:
+            json.dump(self.status, jfile, indent=4)
+        print(f"status of project <{self.name}> saved as {fn}")
+
+    def load_status(self):
+        """ Load the status from JSON file """
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        fn = os.path.join(self.out_folder, 'status.json')
+        if os.path.exists(fn):
+            with open(fn) as jfile:
+                self.status = json.load(jfile)
 
     def reset_optimizer(self):
         self.update_status('idle')
@@ -371,4 +400,53 @@ class FBProject(object):
         if os.path.exists(fn):
             with open(fn) as jfile:
                 self.opt_state = json.load(jfile)
-        self.opt_iter = len(self.opt_state)
+        if self.opt_state:
+            self.opt_iter = max(self.opt_state.keys())
+
+    def collect_optimize_results(self):
+        """ Aggregate and return optimize results after finish """
+        assert self.status == self.project_status['finished']
+        converged = not (self.optimizer.iteration >= self.optimizer.maxstep)
+        self.optimize_results = {
+            'converged': converged,
+            'iteration': self.opt_iter,
+            'obj_values': [self.opt_state[i]['objdict']['Total'] for i in range(1, self.opt_iter+1)],
+        }
+        self.save_optimize_results()
+
+    def save_optimize_results(self):
+        assert self.out_folder != None, 'self.out_folder not setup yet'
+        assert hasattr(self, 'optimize_results'), 'self.optimize_results not created yet'
+        os.chdir(self.project_folder)
+        if not os.path.exists(self.out_folder):
+            os.mkdir(self.out_folder)
+        fn = os.path.join(self.out_folder, 'optimize_results.json')
+        with open(fn, 'w') as jfile:
+            json.dump(self.optimize_results, jfile, indent=4)
+        print(f"optimize_results of project <{self.name}> saved as {fn}")
+
+    def load_optimize_results(self):
+        """ Load the optimize_results from JSON file """
+        assert self.project_folder != None, 'self.project_folder not setup yet'
+        os.chdir(self.project_folder)
+        fn = os.path.join(self.out_folder, 'optimize_results.json')
+        if os.path.exists(fn):
+            with open(fn) as jfile:
+                self.optimize_results = json.load(jfile)
+
+    def get_final_forcefield_info(self):
+        """ return some information about self.force_field """
+        if not hasattr(self, 'force_field'):
+            return None
+        raw_text = ''
+        for f in self.ff_options['forcefield']:
+            with open(os.path.join(self.result_folder, f)) as ff_file:
+                raw_text += ff_file.read() + '\n\n'
+        return {
+            'filenames': self.ff_options['forcefield'],
+            'plist': list(self.force_field.plist),
+            'pvals': [self.opt_state[self.opt_iter]['paramUpdates'][pname]['pval'] for pname in self.force_field.plist],
+            'priors': list(self.force_field.rs),
+            'raw_text': raw_text,
+            'prior_rules': list(self.force_field.priors.items()),
+        }

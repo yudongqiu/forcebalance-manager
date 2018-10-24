@@ -38,7 +38,7 @@ class FBNamespace(Namespace):
         return self._manager.upload_ff_file(projectName, data)
 
     def on_get_forcefield_info(self, projectName):
-        print(f"socketIO: Received upload_ff_file command for project {projectName}")
+        print(f"socketIO: Received get_forcefield_info command for project {projectName}")
         return self._manager.get_forcefield_info(projectName)
 
     def on_set_forcefield_prior_rules(self, projectName, data):
@@ -76,6 +76,14 @@ class FBNamespace(Namespace):
     def on_get_optimizer_state(self, projectName):
         print(f"socketIO: Received get_optimizer_state command for project {projectName}")
         return self._manager.get_optimizer_state(projectName)
+
+    def on_get_optimize_results(self, projectName):
+        print(f"socketIO: Received get_optimize_results command for project {projectName}")
+        return self._manager.get_optimize_results(projectName)
+
+    def on_get_final_forcefield_info(self, projectName):
+        print(f"socketIO: Received get_final_forcefield_info command for project {projectName}")
+        return self._manager.get_final_forcefield_info(projectName)
 
 
 fb_ns = FBNamespace('/api')
