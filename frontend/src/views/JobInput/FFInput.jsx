@@ -16,7 +16,7 @@ import Grid from '@material-ui/core/Grid';
 import Tooltip from '@material-ui/core/Tooltip';
 // @material-ui/icons
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import FileUploadIcon from "@material-ui/icons/FileUpload";
+import FileUploadIcon from "@material-ui/icons/CloudUpload";
 import AddCircleIcon from '@material-ui/icons/AddCircle';
 import DeleteIcon from '@material-ui/icons/Delete';
 // Components

@@ -70,6 +70,10 @@ class FBManager:
         project = self._projects[projectName]
         return project.create_fitting_target(data)
 
+    def validate_target_file(self, projectName, data):
+        project = self._projects[projectName]
+        return project.validate_target_file(data)
+
     def delete_fitting_target(self, projectName, targetName):
         project = self._projects[projectName]
         return project.delete_fitting_target(targetName)

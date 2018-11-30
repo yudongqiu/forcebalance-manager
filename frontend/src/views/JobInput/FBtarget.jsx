@@ -24,7 +24,7 @@ import InputLabel from '@material-ui/core/InputLabel';
 import Chip from '@material-ui/core/Chip';
 // @material-ui/icons
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import FileUploadIcon from "@material-ui/icons/FileUpload";
+import FileUploadIcon from "@material-ui/icons/CloudUpload";
 import AddCircleIcon from '@material-ui/icons/AddCircle';
 import DeleteIcon from '@material-ui/icons/Delete';
 // Components

@@ -24,7 +24,7 @@ import Input from '@material-ui/core/Input';
 import InputLabel from '@material-ui/core/InputLabel';
 // @material-ui/icons
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import FileUploadIcon from "@material-ui/icons/FileUpload";
+import FileUploadIcon from "@material-ui/icons/CloudUpload";
 import AddCircleIcon from '@material-ui/icons/AddCircle';
 import DeleteIcon from '@material-ui/icons/Delete';
 // Components
@@ -36,6 +36,8 @@ import FBtarget from "./FBtarget";
 // Models
 import api from "../../api";
 import { RunningStatus } from "../../constants";
+
+import AbinitioGMXWizard from "./TargetWizards/AbinitioGMXWizard.jsx";
 
 const styles = {
   input: {
@@ -52,10 +54,9 @@ const styles = {
   }
 };
 
-const validTargetTypes = [
-  'ABINITIO_GMX',
-  'ABINITIO_AMBER',
-]
+const targetWizards = {
+  'ABINITIO_GMX': AbinitioGMXWizard
+}
 
 class TargetInput extends React.Component {
   state = {
@@ -63,7 +64,7 @@ class TargetInput extends React.Component {
     dialogOpen: false,
     dialogTargetName: '',
     dialogTargetType: '',
-    dialogFileNames: [],
+    wizardOpen: false,
   }
 
   componentDidMount() {
@@ -91,14 +92,6 @@ class TargetInput extends React.Component {
     }
   }
 
-  addTarget = () => {
-    const targetNames = JSON.parse(JSON.stringify(this.state.targetNames));
-    targetNames.push('');
-    this.setState({
-      targetNames: targetNames,
-    });
-  }
-
   handleOpenDialog = () => {
     this.setState({
       dialogOpen: true,
@@ -117,21 +110,8 @@ class TargetInput extends React.Component {
     });
   };
 
-  selectTargetFiles = event => {
-    const ufiles = Array.from(event.target.files);
-    if (ufiles.length > 0) {
-      const fileNames = ufiles.map(file => {
-        return file.name;
-      });
-      this.setState({
-        dialogFileNames: fileNames,
-      });
-      this.selectedTargetFiles = ufiles;
-    }
-  }
-
-  handleCreateTarget = () => {
-    api.createFittingTarget(this.state.dialogTargetName, this.state.dialogTargetType, this.selectedTargetFiles);
+  handleCreateTarget = (targetFiles) => {
+    api.createFittingTarget(this.state.dialogTargetName, this.state.dialogTargetType, targetFiles);
     this.update();
     this.resetDialog();
   }
@@ -146,17 +126,85 @@ class TargetInput extends React.Component {
       dialogOpen: false,
       dialogTargetName: '',
       dialogTargetType: '',
-      dialogFileNames: [],
+      wizardOpen: false,
     })
-    this.selectedTargetFiles = [];
   }
 
-  render () {
+  handleLaunchWizard = () => {
+    this.setState({
+      dialogOpen: false,
+      wizardOpen: true,
+    })
+  }
+
+  handleCloseWizard = () => {
+    this.setState({
+      wizardOpen: false,
+    })
+  }
+
+  render() {
     const { classes } = this.props;
-    const { targetNames, dialogOpen, dialogTargetName, dialogTargetType, dialogFileNames } = this.state;
+    const { targetNames, dialogOpen, dialogTargetName, dialogTargetType, wizardOpen } = this.state;
     const isRunning = (this.props.status === RunningStatus.running);
     const targetNameExists = (targetNames.indexOf(dialogTargetName) !== -1);
     const isValidTargetName = /^\w+$/.test(dialogTargetName);
+    const validTargetTypes = Object.keys(targetWizards);
+
+    const createDialog = (<Dialog open={dialogOpen} onClose={this.handleCloseDialog} fullWidth>
+      <DialogTitle>Create New Target</DialogTitle>
+      <DialogContent>
+        <Grid container>
+          <GridItem xs={6} sm={6} md={6}>
+            <TextField
+              autoFocus
+              fullWidth
+              label="Target Name"
+              margin="normal"
+              value={dialogTargetName}
+              onChange={this.handleChange('dialogTargetName')}
+              error={!isValidTargetName || targetNameExists}
+              helperText={isValidTargetName ? (targetNameExists ? "Target name exists" : 'Target name available') : "Invalid target name"}
+            />
+          </GridItem>
+          <GridItem xs={6} sm={6} md={6}>
+            <TextField
+              id="select-target-type"
+              select
+              fullWidth
+              margin="normal"
+              label="Target Type"
+              value={dialogTargetType}
+              onChange={this.handleChange('dialogTargetType')}
+              error={!dialogTargetType}
+            >
+              {validTargetTypes.map(option => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </TextField>
+          </GridItem>
+        </Grid>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={this.handleCloseDialog} >
+          Cancel
+      </Button>
+        <Button
+          onClick={this.handleLaunchWizard}
+          disabled={!isValidTargetName || targetNameExists || !dialogTargetType}
+          color='success'
+        >
+          Launch Target Wizard
+      </Button>
+      </DialogActions>
+    </Dialog>);
+
+    const Wizard = targetWizards[dialogTargetType];
+    const wizardDialog = wizardOpen ? (<Dialog open={wizardOpen} maxWidth='md' fullWidth>
+      <Wizard targetName={dialogTargetName} onClose={this.handleCloseWizard} onCreate={this.handleCreateTarget}/>
+    </Dialog>) : <div/>;
 
     return (<Card>
       <CardContent>
@@ -173,7 +221,7 @@ class TargetInput extends React.Component {
           </GridItem>
         </Grid>
         {targetNames.map(name => {
-          return <FBtarget name={name} disabled={isRunning} handleDeleteTarget={this.handleDeleteTarget} key={name}/>;
+          return <FBtarget name={name} disabled={isRunning} handleDeleteTarget={this.handleDeleteTarget} key={name} />;
         })}
         <Button
           onClick={this.handleOpenDialog}
@@ -183,80 +231,9 @@ class TargetInput extends React.Component {
           <AddCircleIcon />
           Create New Target
         </Button>
-        <Dialog
-          open={dialogOpen}
-          onClose={this.handleCloseDialog}
-        >
-          <DialogTitle>Create New Target</DialogTitle>
-          <DialogContent>
-            <Grid container>
-              <GridItem xs={6} sm={6} md={6}>
-                <TextField
-                  autoFocus
-                  fullWidth
-                  label="Target Name"
-                  margin="normal"
-                  value={dialogTargetName}
-                  onChange={this.handleChange('dialogTargetName')}
-                  error={!isValidTargetName || targetNameExists}
-                  helperText={isValidTargetName ? (targetNameExists ? "Target name exists": 'Target name available') : "Invalid target name"}
-                />
-              </GridItem>
-              <GridItem xs={6} sm={6} md={6}>
-                <TextField
-                  id="select-target-type"
-                  select
-                  fullWidth
-                  margin="normal"
-                  label="Target Type"
-                  value={dialogTargetType}
-                  onChange={this.handleChange('dialogTargetType')}
-                  error={!dialogTargetType}
-                >
-                  {validTargetTypes.map(option => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </GridItem>
-              <GridItem xs={12} sm={12} md={12}>
-                <FormControl fullWidth>
-                  <InputLabel htmlFor="target-files">Target Files</InputLabel>
-                  <Input
-                    id="target-files"
-                    value={dialogFileNames}
-                    onChange={null}
-                    endAdornment={
-                      <InputAdornment position="end">
-                        <input type="file" id="file-upload" className={classes.input} onChange={this.selectTargetFiles} multiple />
-                        <label htmlFor="file-upload">
-                          <IconButton component="span">
-                            <FileUploadIcon />
-                          </IconButton>
-                        </label>
-                      </InputAdornment>
-                    }
-                    error={dialogFileNames.length === 0}
-                  />
-                </FormControl>
-              </GridItem>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={this.handleCloseDialog} >
-              Cancel
-            </Button>
-            <Button
-              onClick={this.handleCreateTarget}
-              disabled={!isValidTargetName || targetNameExists || !dialogTargetType || dialogFileNames.length === 0}
-              color='success'
-            >
-              Create
-            </Button>
-          </DialogActions>
-        </Dialog>
       </CardContent>
+      {createDialog}
+      {wizardDialog}
     </Card>);
   }
 }

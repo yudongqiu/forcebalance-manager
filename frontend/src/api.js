@@ -163,6 +163,20 @@ class ForceBalanceAPI {
         }
     }
 
+    validate_target_file(targetName, targetType, files, fileType, callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('validate_target_file', this.projectName, {
+                targetName: targetName,
+                targetType: targetType,
+                fileType: fileType,
+                fileNames: files.map(f => {return f.name}),
+                fileDatas: files
+            },
+            (data) => {callback(data)});
+        }
+    }
+
+
     register(event, callback) {
         if (event in this.eventCallbacks) {
             // append this callback function only if it does not exist yet

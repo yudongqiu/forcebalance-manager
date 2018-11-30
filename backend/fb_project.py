@@ -5,8 +5,11 @@ import os
 import shutil
 import json
 import copy
+import tempfile
 
 import forcebalance
+
+from backend.target_validators import new_validator
 
 class FBProject(object):
     project_status = {'idle': 0, 'running':1, 'finished': 2, 'error': 3}
@@ -52,6 +55,8 @@ class FBProject(object):
         self.optimize_results = None
         # following the rule of ForceBalance choosing where to put the result force field
         self.result_folder = os.path.join('result', self.input_filename.split('.')[0])
+        # temporary dict to hold the target validators
+        self.target_validators = dict()
 
     def register_manager(self, manager):
         """ Register the FBmanager instance for callback functions """
@@ -184,6 +189,25 @@ class FBProject(object):
         })
         self.fb_targets[target_name] = target_options
         self.save_fb_targets()
+
+    def validate_target_file(self, data):
+        """ Validate file for a fitting target before adding to this project """
+        # parse input data
+        target_name = data['targetName']
+        target_type = data['targetType']
+        file_type = data['fileType']
+        # write the files in a temporary folder
+        folder = tempfile.mkdtemp(prefix='validator_')
+        fileuris = []
+        for fname, fdata in zip(data['fileNames'], data['fileDatas']):
+            fileuri = os.path.join(folder, fname)
+            with open(fileuri, 'wb') as byte_f:
+                byte_f.write(fdata)
+            fileuris.append(fileuri)
+        # create a new target validator if not exist, else continue to use existing one
+        validator = self.target_validators.setdefault(target_name, new_validator(target_type))
+        # validate the files
+        return validator.validate(file_type, fileuris)
 
     def delete_fitting_target(self, target_name):
         """ Delete a fitting target from this project """
