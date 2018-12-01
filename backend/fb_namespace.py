@@ -89,6 +89,10 @@ class FBNamespace(Namespace):
         print(f"socketIO: Received validate_target_file command for project {projectName}")
         return self._manager.validate_target_file(projectName, data)
 
+    def on_validate_target_create(self, projectName, data):
+        print(f"socketIO: Received validate_target_create command for project {projectName}")
+        return self._manager.validate_target_create(projectName, data)
+
 
 fb_ns = FBNamespace('/api')
 

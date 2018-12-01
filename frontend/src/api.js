@@ -176,6 +176,14 @@ class ForceBalanceAPI {
         }
     }
 
+    validate_target_create(targetName, callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('validate_target_create', this.projectName, {
+                targetName: targetName,
+            },
+            (data) => {callback(data)});
+        }
+    }
 
     register(event, callback) {
         if (event in this.eventCallbacks) {

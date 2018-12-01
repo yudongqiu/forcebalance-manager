@@ -182,10 +182,16 @@ class FBProject(object):
             }
         }
         target_options = default_target_options[target_type]
+        gro_filename = next(f for f in data['fileNames'] if os.path.splitext(f)[-1] == '.gro')
+        top_filename = next(f for f in data['fileNames'] if os.path.splitext(f)[-1] == '.top')
+        mdp_filename = next(f for f in data['fileNames'] if os.path.splitext(f)[-1] == '.mdp')
         target_options.update({
             'name': target_name,
             'type': target_type,
             'fileNames': data['fileNames'],
+            'coords': gro_filename,
+            'gmx_top': top_filename,
+            'gmx_mdp': mdp_filename,
         })
         self.fb_targets[target_name] = target_options
         self.save_fb_targets()
@@ -196,18 +202,28 @@ class FBProject(object):
         target_name = data['targetName']
         target_type = data['targetType']
         file_type = data['fileType']
-        # write the files in a temporary folder
-        folder = tempfile.mkdtemp(prefix='validator_')
-        fileuris = []
-        for fname, fdata in zip(data['fileNames'], data['fileDatas']):
-            fileuri = os.path.join(folder, fname)
-            with open(fileuri, 'wb') as byte_f:
-                byte_f.write(fdata)
-            fileuris.append(fileuri)
+        file_names = data['fileNames']
+        file_datas = data['fileDatas']
         # create a new target validator if not exist, else continue to use existing one
-        validator = self.target_validators.setdefault(target_name, new_validator(target_type))
+        validator = self.target_validators.get(target_name, None)
+        if validator is None:
+            self.target_validators[target_name] = validator = new_validator(target_type, target_name)
         # validate the files
-        return validator.validate(file_type, fileuris)
+        ret = validator.validate(file_type, file_names, file_datas)
+        # return
+        return ret
+
+    def validate_target_create(self, data):
+        """ Final test to see if a target is able to be created """
+        # check if force field is created
+        assert hasattr(self, 'force_field'), 'self.force_field need to be created before testing create targets'
+        # parse input data
+        target_name = data['targetName']
+        # get validator for this target
+        validator = self.target_validators.get(target_name, None)
+        assert validator is not None, 'validator should already exist for this target before final test create'
+        # run test create
+        return validator.test_create(self.force_field)
 
     def delete_fitting_target(self, target_name):
         """ Delete a fitting target from this project """
@@ -312,10 +328,10 @@ class FBProject(object):
         # build objective
         target_options = []
         for opt in self.fb_targets.values():
-            tgt_opt = forcebalance.parser.tgt_opts_defaults.copy()
+            tgt_opt = copy.deepcopy(forcebalance.parser.tgt_opts_defaults)
             tgt_opt.update(opt)
             target_options.append(tgt_opt)
-        gen_options = forcebalance.parser.gen_opts_defaults.copy()
+        gen_options = copy.deepcopy(forcebalance.parser.gen_opts_defaults)
         gen_options.update(self.optimizer_options)
         gen_options['root'] = self.project_folder
         gen_options['input_file'] = self.input_filename

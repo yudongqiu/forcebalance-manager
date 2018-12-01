@@ -7,7 +7,6 @@ import CardContent from '@material-ui/core/CardContent';
 import CardActions from '@material-ui/core/CardActions';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import Divider from '@material-ui/core/Divider';
-// import Button from '@material-ui/core/Button';
 import IconButton from '@material-ui/core/IconButton';
 import FormControl from '@material-ui/core/FormControl';
 import Input from '@material-ui/core/Input';
@@ -24,12 +23,16 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
+import Avatar from '@material-ui/core/Avatar';
+import red from '@material-ui/core/colors/red';
+import green from '@material-ui/core/colors/green';
 // @material-ui/icons
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import FileUploadIcon from "@material-ui/icons/CloudUpload";
 import AddCircleIcon from '@material-ui/icons/AddCircle';
 import DeleteIcon from '@material-ui/icons/Delete';
 import DoneIcon from '@material-ui/icons/Done';
+import ErrorIcon from '@material-ui/icons/Error';
 // Components
 import GridItem from "components/Grid/GridItem.jsx";
 import CustomInput from "components/CustomInput/CustomInput.jsx";
@@ -59,12 +62,30 @@ const styles = {
   },
   fullWidth: {
     width: '100%',
-  },
-  halfWidth: {
-    width: "50%",
+    height: '100%',
   },
   section: {
     marginBottom: 5,
+  },
+  greenAvatar: {
+    margin: 10,
+    color: '#fff',
+    backgroundColor: green[500],
+  },
+  redAvatar: {
+    margin: 10,
+    color: '#fff',
+    backgroundColor: red[500],
+  },
+  center: {
+    height: 300,
+    display: 'flex',
+    justifyContent: 'center',
+    paddingTop: '20%',
+  },
+  title: {
+    fontSize: 20,
+    paddingTop: 16,
   }
 };
 
@@ -82,6 +103,7 @@ class AbinitioGMXWizard extends React.Component {
     qdataData: null,
     mdpData: null,
     topData: null,
+    finalData: null,
     confirmDialogOpen: false,
   }
 
@@ -196,6 +218,22 @@ class AbinitioGMXWizard extends React.Component {
     }
   }
 
+  handleFinalValidate = () => {
+    api.validate_target_create(this.props.targetName, this.updateFinalValidateResult);
+  }
+
+  updateFinalValidateResult = (data) => {
+    const { completed } = this.state;
+    if (data) {
+      completed[3] = data.success;
+      this.setState({
+        completed,
+        finalData: data,
+        activeStep: 3,
+      })
+    }
+  }
+
   handleAbort = () => {
     if (this.state.completed[0]) {
       this.setState({
@@ -228,7 +266,7 @@ class AbinitioGMXWizard extends React.Component {
   render() {
     const { classes } = this.props;
     const { activeStep, completed, groFileName, qdataFileName, mdpFileName, topFileName,
-      mviewFile, groData, qdataData, mdpData, topData, confirmDialogOpen } = this.state;
+      mviewFile, groData, qdataData, mdpData, topData, finalData, confirmDialogOpen } = this.state;
 
     const minfo = [];
     if (activeStep >= 0) {
@@ -359,8 +397,7 @@ class AbinitioGMXWizard extends React.Component {
             {mview}
           </div>
         </div>
-      </div>
-    );
+      </div>);
 
     const mdptopUploadPage = (
       <div className={classes.fullWidth} >
@@ -419,10 +456,31 @@ class AbinitioGMXWizard extends React.Component {
       </div>
     );
 
-    const stepContents = [groUploadPage, qdataUploadPage, mdptopUploadPage];
+    let finalTestPage = <div />;
+    if (activeStep == 3) {
+      const success = finalData.success;
+      const avatar = <Avatar className={success ? classes.greenAvatar: classes.redAvatar}>
+        {success ? <DoneIcon /> : <ErrorIcon />}
+      </Avatar>
+      const msg = <div className={classes.title}>
+        {success ? 'Congratulations! Target validated succesfully and can be created now' : 'Oops! ' + finalData.error}
+      </div>;
+      finalTestPage =
+        <div className={classes.center} >
+          {avatar}
+          {msg}
+        </div>;
+    }
 
-    const nextButton = <Button variant="contained" color="primary" onClick={this.handleNext} disabled={!completed[activeStep]}>Next</Button>;
-    const createButton = <Button variant="contained" color="primary" onClick={this.handleCreate} disabled={!completed[activeStep]}>Create</Button>
+
+    const stepContents = [groUploadPage, qdataUploadPage, mdptopUploadPage, finalTestPage];
+
+    let nextButton = <Button variant="contained" color="primary" onClick={this.handleNext} disabled={!completed[activeStep]}>Next</Button>;
+    if (activeStep == stepContents.length - 2) {
+      nextButton = <Button variant="contained" color="primary" onClick={this.handleFinalValidate} disabled={!completed[activeStep]}>Validate</Button>;
+    } else if (activeStep == stepContents.length - 1) {
+      nextButton = <Button variant="contained" color="primary" onClick={this.handleCreate} disabled={!completed[activeStep]}>Create</Button>
+    }
 
     const confirmDialog = <Dialog
       open={confirmDialogOpen}
@@ -475,6 +533,15 @@ class AbinitioGMXWizard extends React.Component {
                 Upload mdp, top File
               </StepButton>
             </Step>
+            <Step>
+              <StepButton
+                onClick={this.handleStep(3)}
+                completed={completed[3]}
+                disabled={true}
+              >
+                Final Test Create
+              </StepButton>
+            </Step>
           </Stepper>
           <div className={classes.contentWrapper} >
             {stepContents[activeStep]}
@@ -482,7 +549,7 @@ class AbinitioGMXWizard extends React.Component {
         </CardContent>
         <CardActions>
           <Button onClick={this.handleAbort} variant="contained" color="secondary" style={{marginRight: 30}}>Abort</Button>
-          {(activeStep === stepContents.length - 1) ? createButton : nextButton}
+          {nextButton}
         </CardActions>
         {confirmDialog}
       </Card>
