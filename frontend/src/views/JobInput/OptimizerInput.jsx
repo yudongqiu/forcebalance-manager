@@ -11,9 +11,11 @@ import MenuItem from '@material-ui/core/MenuItem';
 import TextField from '@material-ui/core/TextField';
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
+import Checkbox from '@material-ui/core/Checkbox';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 // core components
 import GridItem from "components/Grid/GridItem.jsx";
-import CustomInput from "components/CustomInput/CustomInput.jsx";
+import HintButton from "components/CustomButtons/HintButton.jsx";
 // Models
 import api from "../../api";
 import { RunningStatus } from "../../constants";
@@ -36,6 +38,9 @@ class OptimizerInput extends React.Component {
     convergence_gradient: 0.001,
     trust0: 0.1,
     finite_difference_h: 0.001,
+    asynchronous: false,
+    wq_port: 0,
+    wqStatus: {code: 'not_connected'},
   }
 
   componentDidMount() {
@@ -49,6 +54,7 @@ class OptimizerInput extends React.Component {
 
   update = () => {
     api.getOptimizerOptions(this.updateOptimizerOptions);
+    api.getWorkQueueStatus(this.updateWorkQueueStatus);
   }
 
   updateOptimizerOptions = (data) => {
@@ -57,16 +63,28 @@ class OptimizerInput extends React.Component {
     }
   }
 
+  updateWorkQueueStatus = (data) => {
+    this.setState({
+      wqStatus: data,
+    })
+  }
+
   handleSetOption = event => {
     const update = { [event.target.name]: event.target.value };
     api.setOptimizerOptions(update);
     this.setState(update);
   }
 
+  handleCheckAync = (event) => {
+    const update = { asynchronous: event.target.checked };
+    api.setOptimizerOptions(update);
+    this.setState(update);
+  }
+
   render () {
     const { classes } = this.props;
-    const { jobtype, maxstep, penalty_type, convergence_objective, convergence_step, convergence_gradient, trust0, finite_difference_h } = this.state;
-    const isRunning = (this.props.status === RunningStatus.running);
+    const { jobtype, maxstep, penalty_type, convergence_objective, convergence_step,
+      convergence_gradient, trust0, finite_difference_h, asynchronous, wq_port, wqStatus } = this.state;
 
     return (
       <Card>
@@ -188,6 +206,40 @@ class OptimizerInput extends React.Component {
                   shrink: true,
                 }}
                 margin='normal'
+              />
+            </GridItem>
+          </Grid>
+        </CardContent>
+        <CardContent>
+          <Grid container>
+            <GridItem xs={4} sm={4} md={4}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={asynchronous}
+                    onChange={this.handleCheckAync}
+                    color="primary"
+                    disabled={wqStatus.code !== 'ready'}
+                  />
+                }
+                label="Enable Async Target Evaluation"
+              />
+              <HintButton hint='See Work Queue page for more info' />
+            </GridItem>
+            <GridItem xs={4} sm={4} md={4}>
+              <TextField
+                name="wq_port"
+                type="number"
+                label="Work Queue Port"
+                onChange={this.handleSetOption}
+                value={wq_port}
+                fullWidth
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin='normal'
+                disabled={!asynchronous}
+                error={wq_port <= 0 && asynchronous}
               />
             </GridItem>
           </Grid>

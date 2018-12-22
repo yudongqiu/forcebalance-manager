@@ -1,5 +1,4 @@
 import time
-import numpy as np
 import threading
 import os
 import shutil
@@ -48,6 +47,8 @@ class FBProject(object):
             'convergence_gradient': 1e-3,
             'trust0': 0.1,
             'finite_difference_h': 1e-3,
+            'asynchronous': False,
+            'wq_port': 0,
         }
         self.input_filename = 'fb.in'
         self.opt_state = dict()
@@ -330,6 +331,8 @@ class FBProject(object):
         for opt in self.fb_targets.values():
             tgt_opt = copy.deepcopy(forcebalance.parser.tgt_opts_defaults)
             tgt_opt.update(opt)
+            # set target option "remote" to True if using async evaluation
+            tgt_opt['remote'] = self.optimizer_options['asynchronous']
             target_options.append(tgt_opt)
         gen_options = copy.deepcopy(forcebalance.parser.gen_opts_defaults)
         gen_options.update(self.optimizer_options)
@@ -489,4 +492,27 @@ class FBProject(object):
             'priors': list(self.force_field.rs),
             'raw_text': raw_text,
             'prior_rules': list(self.force_field.priors.items()),
+        }
+
+    def get_workqueue_status(self):
+        """ return the status of work queue system """
+        # check if work queue is installed
+        try:
+            import work_queue
+        except ImportError:
+            return {
+                'code': 'not_installed',
+                'description': 'work_queue module is not installed, please try forcebalance/tools/install-cctools-62.sh'
+            }
+        # check if a work queue is created
+        wq = forcebalance.nifty.getWorkQueue()
+        if wq is None:
+            return {
+                'code': 'ready',
+            }
+        import IPython
+        IPython.embed()
+        return {
+            'code': 'running',
+            'description': 'work queue is in use. Current ForceBalance implementation only allows using one work queue at a time.'
         }

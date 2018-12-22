@@ -121,5 +121,9 @@ class FBManager:
         project = self._projects[projectName]
         return project.get_final_forcefield_info()
 
+    def get_workqueue_status(self, projectName):
+        project = self._projects[projectName]
+        return project.get_workqueue_status()
+
 manager = FBManager()
 manager.load_existing_projects()

@@ -185,6 +185,12 @@ class ForceBalanceAPI {
         }
     }
 
+    getWorkQueueStatus(callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_workqueue_status', this.projectName, (data) => {callback(data)});
+        }
+    }
+
     register(event, callback) {
         if (event in this.eventCallbacks) {
             // append this callback function only if it does not exist yet

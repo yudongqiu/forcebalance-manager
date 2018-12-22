@@ -93,6 +93,11 @@ class FBNamespace(Namespace):
         print(f"socketIO: Received validate_target_create command for project {projectName}")
         return self._manager.validate_target_create(projectName, data)
 
+    def on_get_workqueue_status(self, projectName):
+        print(f"socketIO: Received get_workqueue_status command for project {projectName}")
+        return self._manager.get_workqueue_status(projectName)
+
+
 
 fb_ns = FBNamespace('/api')
 
