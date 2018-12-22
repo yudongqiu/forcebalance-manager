@@ -21,6 +21,8 @@ To start the web app server:
 python run.py
 ```
 
+Then the webpage can be opened in browser (Chrome recommended), with default address http://localhost:5005
+
 ## Development
 
 Frontend developement guide can be found in the `frontend/` folder.

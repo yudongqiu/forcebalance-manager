@@ -3,16 +3,23 @@
 
 ForceBalance Manager
 
-## Terminal Commands
+## NPM development guide
 
 1. Install NodeJs from [NodeJs Official Page](https://nodejs.org/en).
-2. Open Terminal
-3. Go to your file project
-4. Run in terminal: ```npm install```
-5. Then: ```npm start```
-6. Navigate to `http://localhost:3000/`
-7. (optional) Run in terminal `npm i -g cross-env`
+2. Run in terminal: ```npm install```
+3. Then: ```npm start```
+4. Navigate to `http://localhost:3000/`
+
+The npm development server will by default connect to the backend server at http://localhost:5005
+
+## Build frontend static package
+
+Building the package will allow frontend performance optimizations, and the static web pages will be directly served at http://localhost:5005
+
+```npm run build```
+
+
 
 [LICENSE]: ./LICENSE.md
-[version-badge]: https://img.shields.io/badge/version-1.0.0-blue.svg
+[version-badge]: https://img.shields.io/badge/version-0.1.0-blue.svg
 [license-badge]: https://img.shields.io/badge/license-MIT-blue.svg
