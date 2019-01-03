@@ -323,6 +323,8 @@ class FBProject(object):
                 f.write('$end\n\n')
 
     def launch_optimizer(self):
+        # make sure optimizer is not running now
+        assert self.status != self.project_status['running'], 'Optimizer is running, wait to finish before launching new'
         # make sure we're in the project folder
         assert self.project_folder != None, 'self.project_folder not setup yet'
         os.chdir(self.project_folder)
