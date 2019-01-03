@@ -510,8 +510,6 @@ class FBProject(object):
             return {
                 'code': 'ready',
             }
-        import IPython
-        IPython.embed()
         return {
             'code': 'running',
             'description': 'work queue is in use. Current ForceBalance implementation only allows using one work queue at a time.'

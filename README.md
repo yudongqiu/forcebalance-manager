@@ -13,7 +13,7 @@ First install ForceBalance https://github.com/leeping/forcebalance
 
 Then install dependencies:
 ```
-pip install flask flask-cors flask-socketio
+pip install flask flask-socketio
 ```
 
 To start the web app server:
