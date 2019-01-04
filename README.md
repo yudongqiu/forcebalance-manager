@@ -1,5 +1,4 @@
 # [ForceBalance Manager](https://yudongqiu.github.io/forcebalance-manager/)
-[![license][license-badge]][LICENSE]
 
 ForceBalance Manager
 
