@@ -202,7 +202,7 @@ class TargetInput extends React.Component {
     </Dialog>);
 
     const Wizard = targetWizards[dialogTargetType];
-    const wizardDialog = wizardOpen ? (<Dialog open={wizardOpen} maxWidth='md' fullWidth>
+    const wizardDialog = wizardOpen ? (<Dialog open={wizardOpen} maxWidth='md' fullWidth scroll='body'>
       <Wizard targetName={dialogTargetName} onClose={this.handleCloseWizard} onCreate={this.handleCreateTarget}/>
     </Dialog>) : <div/>;
 
