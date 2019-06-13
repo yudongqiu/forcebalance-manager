@@ -13,13 +13,13 @@ import ResultsPage from "views/Results/Results.jsx";
 import WorkQueuePage from "views/WorkQueue/WorkQueue.jsx";
 
 const dashboardRoutes = [
-  {
-    path: "/dashboard",
-    sidebarName: "Dashboard",
-    navbarName: "Dashboard",
-    icon: DashboardIcon,
-    component: DashboardPage
-  },
+  // {
+  //   path: "/dashboard",
+  //   sidebarName: "Dashboard",
+  //   navbarName: "Dashboard",
+  //   icon: DashboardIcon,
+  //   component: DashboardPage
+  // },
   {
     path: "/input",
     sidebarName: "Input",
@@ -48,7 +48,7 @@ const dashboardRoutes = [
     icon: InsertChartIcon,
     component: ResultsPage
   },
-  { redirect: true, path: "/", to: "/dashboard", navbarName: "Redirect" }
+  { redirect: true, path: "/", to: "/input", navbarName: "Redirect" }
 ];
 
 export default dashboardRoutes;

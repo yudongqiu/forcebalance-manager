@@ -25,42 +25,21 @@ const styles = {
     display: 'flex',
     flexWrap: 'wrap',
   },
-  formControl: {
-    paddingBottom: "10px",
-    margin: "27px 0 0 0",
-    position: "relative"
-  },
-  labelRoot: {
-    color: "#999999",
-    fontWeight: "400",
-    fontSize: "16px",
-    whiteSpace: "nowrap",
-    lineHeight: "1.42857"
-  },
-  cardCategoryWhite: {
-    color: "rgba(255,255,255,.62)",
-    margin: "0",
-    fontSize: "14px",
-    marginTop: "0",
-    marginBottom: "0"
-  },
-  cardTitleWhite: {
-    color: "#FFFFFF",
-    marginTop: "0px",
-    minHeight: "auto",
-    fontWeight: "300",
-    fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
-    marginBottom: "3px",
-    textDecoration: "none"
+  red: {
+    color: 'red',
   }
 };
 
 class JobInput extends React.Component {
-  state = {
-    activeStep: 0,
-    completed: {},
-    dialogOpen: false,
+  constructor(props) {
+    super(props);
+    this.state = {
+      activeStep: 0,
+      dialogOpen: false,
+      status: null,
+    }
   }
+
 
   componentDidMount() {
     api.onChangeProjectName(this.update);
@@ -75,11 +54,6 @@ class JobInput extends React.Component {
   }
 
   update = () => {
-    api.getInputParams(this.updateParams);
-  }
-
-  updateParams = (data) => {
-    this.setState(data);
   }
 
   updateStatus = (data) => {
@@ -106,10 +80,6 @@ class JobInput extends React.Component {
     });
   };
 
-  isStepComplete(step) {
-    return this.state.completed.has(step);
-  }
-
   handleOpenDialog = () => {
     this.setState({
       dialogOpen: true,
@@ -135,6 +105,21 @@ class JobInput extends React.Component {
     }
     const { activeStep, status, dialogOpen } = this.state;
     const { classes } = this.props;
+    const actionButton = (activeStep < 2) ? <Button
+      variant="contained"
+      color='primary'
+      onClick={this.handleStep(activeStep+1)}
+    >
+      Next
+    </Button>
+    : <Button
+      variant="contained"
+      color='primary'
+      onClick={status === RunningStatus.idle ? this.launchOptimizer : this.handleOpenDialog}
+      disabled={status === RunningStatus.running}
+    >
+      Launch Optimizer
+    </Button>;
     return (
       <div>
         <Stepper activeStep={activeStep} orientation="vertical">
@@ -156,7 +141,7 @@ class JobInput extends React.Component {
               Targets
             </StepButton>
             <StepContent>
-              <TargetInput status={status} />
+              <TargetInput status={status}/>
             </StepContent>
           </Step>
           <Step>
@@ -171,14 +156,7 @@ class JobInput extends React.Component {
             </StepContent>
           </Step>
         </Stepper>
-        <Button
-          variant="contained"
-          color='primary'
-          onClick={status === RunningStatus.idle ? this.launchOptimizer : this.handleOpenDialog}
-          disabled={status === RunningStatus.running}
-        >
-          Launch Optimizer
-        </Button>
+        {actionButton}
         <Dialog
           open={dialogOpen}
           onClose={this.handleCloseDialog}

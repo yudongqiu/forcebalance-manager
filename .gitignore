@@ -67,7 +67,9 @@ __pycache__/
 
 # Mac
 __MACOSX
+.DS_Store
 
 # projects
-
 projects/
+
+
