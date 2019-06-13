@@ -137,12 +137,21 @@ class FBProject(object):
         """ return some information about self.force_field """
         if not hasattr(self, 'force_field'):
             return None
+        assert self.project_folder, 'project_folder is not setup correctly'
+        # make sure we're at the project folder
+        os.chdir(self.project_folder)
+        # get content of all files
+        raw_text = ''
+        for filename in self.ff_options['forcefield']:
+            with open(os.path.join(self.ff_folder, filename)) as ff_file:
+                raw_text += f'[ {filename} ]\n'
+                raw_text += ff_file.read()
         return {
             'filenames': self.ff_options['forcefield'],
             'plist': list(self.force_field.plist),
             'pvals': list(self.force_field.pvals0),
             'priors': list(self.force_field.rs),
-            'raw_text': self.force_field.ffdata[self.ff_options['forcefield'][0]],
+            'raw_text': raw_text,
             'prior_rules': list(self.force_field.priors.items()),
         }
 
@@ -180,20 +189,39 @@ class FBProject(object):
                 'force': True,
                 'w_energy': 1.0,
                 'w_force': 1.0,
+            },
+            'ABINITIO_SMIRNOFF': {
+                'energy': True,
+                'force': True,
+                'w_energy': 1.0,
+                'w_force': 1.0,
+                'attenuate': True,
+                'energy_denom': 2.0,
+                'energy_upper': 10.0,
+                'force_rms_override': 100.0,
             }
         }
         target_options = default_target_options[target_type]
-        gro_filename = next(f for f in data['fileNames'] if os.path.splitext(f)[-1] == '.gro')
-        top_filename = next(f for f in data['fileNames'] if os.path.splitext(f)[-1] == '.top')
-        mdp_filename = next(f for f in data['fileNames'] if os.path.splitext(f)[-1] == '.mdp')
-        target_options.update({
-            'name': target_name,
-            'type': target_type,
-            'fileNames': data['fileNames'],
-            'coords': gro_filename,
-            'gmx_top': top_filename,
-            'gmx_mdp': mdp_filename,
-        })
+        if target_type == 'ABINITIO_GMX':
+            gro_filename,qdata_filename,top_filename,mdp_filename = data['fileNames']
+            target_options.update({
+                'name': target_name,
+                'type': target_type,
+                'fileNames': data['fileNames'],
+                'coords': gro_filename,
+                'gmx_top': top_filename,
+                'gmx_mdp': mdp_filename,
+            })
+        elif target_type == 'ABINITIO_SMIRNOFF':
+            coords_filename,qdata_filename,mol2_filename,pdb_filename = data['fileNames']
+            target_options.update({
+                'name': target_name,
+                'type': target_type,
+                'fileNames': data['fileNames'],
+                'coords': coords_filename,
+                'mol2': [mol2_filename],
+                'pdb': pdb_filename,
+            })
         self.fb_targets[target_name] = target_options
         self.save_fb_targets()
 
@@ -223,6 +251,8 @@ class FBProject(object):
         # get validator for this target
         validator = self.target_validators.get(target_name, None)
         assert validator is not None, 'validator should already exist for this target before final test create'
+        # copy the forcefield folder to validator's tmp root
+        validator.copy_ffdir(self.project_folder, self.ff_folder)
         # run test create
         return validator.test_create(self.force_field)
 

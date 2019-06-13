@@ -50,7 +50,7 @@ export default class CreateProjectDialog extends React.Component {
     return (
       <Dialog
         open={this.props.open}
-        onClose={this.props.onClose}
+        // onClose={this.props.onClose}
       >
         <DialogTitle id="form-dialog-title">Create New Project</DialogTitle>
         <DialogContent>

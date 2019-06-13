@@ -38,6 +38,7 @@ import api from "../../api";
 import { RunningStatus } from "../../constants";
 
 import AbinitioGMXWizard from "./TargetWizards/AbinitioGMXWizard.jsx";
+import AbinitioSMINORFFWizard from "./TargetWizards/AbinitioSMIRNOFFWizard.jsx";
 
 const styles = {
   input: {
@@ -55,7 +56,8 @@ const styles = {
 };
 
 const targetWizards = {
-  'ABINITIO_GMX': AbinitioGMXWizard
+  'ABINITIO_GMX': AbinitioGMXWizard,
+  'ABINITIO_SMIRNOFF': AbinitioSMINORFFWizard,
 }
 
 class TargetInput extends React.Component {

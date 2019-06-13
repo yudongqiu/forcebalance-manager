@@ -48,8 +48,12 @@ class MoleculeViewer extends React.Component {
   componentDidMount() {
     this.stage = new Stage("viewport", { backgroundColor: "white" });
     this.stage.viewer.camera.near = 0.0001;
-    if (this.props.file)
-    this.stage.loadFile(this.props.file, {defaultRepresentation: true, asTrajectory: true}).then( this.loadTraj );
+    if (this.props.pdbString) {
+      var stringBlob = new Blob( [ this.props.pdbString ], { type: 'text/plain' } );
+      this.stage.loadFile( stringBlob, { ext: "pdb", defaultRepresentation: true, asTrajectory: true }).then( this.loadTraj );
+    } else if (this.props.file) {
+      this.stage.loadFile(this.props.file, {defaultRepresentation: true, asTrajectory: true}).then( this.loadTraj );
+    }
   }
 
   loadTraj = (o) => {
@@ -61,10 +65,15 @@ class MoleculeViewer extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (prevProps.file !== this.props.file) {
+    if (prevProps.pdbString !== this.props.pdbString) {
       this.stage.removeAllComponents();
-      this.stage.loadFile(this.props.file, {defaultRepresentation: true, asTrajectory: true}).then( this.loadTraj );
+      var stringBlob = new Blob( [ this.props.pdbString ], { type: 'text/plain' } );
+      this.stage.loadFile( stringBlob, { ext: "pdb", defaultRepresentation: true, asTrajectory: true }).then( this.loadTraj );
     }
+    // else if (prevProps.file !== this.props.file) {
+    //   this.stage.removeAllComponents();
+    //   this.stage.loadFile(this.props.file, {defaultRepresentation: true, asTrajectory: true}).then( this.loadTraj );
+    // }
   }
 
   componentWillUnmount() {
@@ -133,6 +142,7 @@ class MoleculeViewer extends React.Component {
 MoleculeViewer.propTypes = {
   classes: PropTypes.object.isRequired,
   file: PropTypes.object,
+  pdbString: PropTypes.string,
 };
 
 export default withStyles(styles)(MoleculeViewer);

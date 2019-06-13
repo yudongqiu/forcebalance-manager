@@ -100,8 +100,9 @@ class JobInput extends React.Component {
   }
 
   handleStep = step => () => {
+    const activeStep = this.state.activeStep;
     this.setState({
-      activeStep: step,
+      activeStep: step === activeStep ? null : step,
     });
   };
 

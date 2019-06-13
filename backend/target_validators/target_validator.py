@@ -20,3 +20,6 @@ class TargetValidator:
     def __del__(self):
         if os.path.isdir(self._tempd):
             shutil.rmtree(self._tempd)
+
+    def copy_ffdir(self, orig_root, ffdir):
+        shutil.copytree(os.path.join(orig_root, ffdir), os.path.join(self._tempd, ffdir))
