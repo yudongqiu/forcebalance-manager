@@ -85,12 +85,18 @@ class WorkQueue extends React.Component {
         <div>
           Description: {wqStatus.description}
         </div>
+        <div>
+          Workers: {wqStatus.worker_running}/{wqStatus.worker_total}
+        </div>
+        <div>
+          Jobs: {wqStatus.job_finished}/{wqStatus.job_total}
+        </div>
       </div>;
       if (wqStatus && wqStatus.code === 'ready') {
         readyButton = <Button variant="outlined" color="primary">
           ready
         </Button>;
-        statusDetails = null;
+        // statusDetails = null;
       }
       return (
         <div>

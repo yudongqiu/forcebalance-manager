@@ -9,6 +9,7 @@ import tempfile
 import forcebalance
 
 from backend.target_validators import new_validator
+from backend.fb_executor import FBExecutor
 
 class FBProject(object):
     project_status = {'idle': 0, 'running':1, 'finished': 2, 'error': 3}
@@ -50,12 +51,7 @@ class FBProject(object):
             'asynchronous': False,
             'wq_port': 0,
         }
-        self.input_filename = 'fb.in'
         self.opt_state = dict()
-        self.out_folder = 'outputs'
-        self.optimize_results = None
-        # following the rule of ForceBalance choosing where to put the result force field
-        self.result_folder = os.path.join('result', self.input_filename.split('.')[0])
         # temporary dict to hold the target validators
         self.target_validators = dict()
 
@@ -63,17 +59,42 @@ class FBProject(object):
         """ Register the FBmanager instance for callback functions """
         self._manager = manager
 
+    def observe_executor(self, event):
+        """ Observe events from executor and perform actions """
+        if event == 'status_update':
+            self.update_status()
+        elif event == 'iter_update':
+            self.update_opt_state()
+        else:
+            print(f"Observed unrecognized event {event}")
+
+    def in_project_folder(func):
+        "Decorator for functions to run in project folder"
+        def new_func(self, *args, **kwargs):
+            assert self.project_folder, 'project_folder is not setup correctly'
+            # check the project folder exist
+            assert os.path.exists(self.project_folder), f'project_folder {self.project_folder} does not exist'
+            # make sure we're at the project folder
+            os.chdir(self.project_folder)
+            return func(self, *args, **kwargs)
+        return new_func
+
     def create_project_folder(self, project_folder):
         """ create project folder as part of the initialization called by FBmanager """
         assert not os.path.exists(project_folder)
         os.makedirs(project_folder)
         self.project_folder = project_folder
+        # create fbexecutor
+        self._fbexecutor = FBExecutor(self.project_folder, prefix='fb')
+        self._fbexecutor.register_observer(self.observe_executor)
 
     def load_from_project_folder(self, project_folder):
         """ Load the project data from the project folder """
         self.project_folder = project_folder
-        # forcebalance constructor only works in project folder
-        os.chdir(self.project_folder)
+        os.chdir(project_folder)
+        # create fbexecutor
+        self._fbexecutor = FBExecutor(self.project_folder, prefix='fb')
+        self._fbexecutor.register_observer(self.observe_executor)
         # load self.force_field
         if os.path.exists(self.ff_folder):
             ff_fnames = os.listdir(self.ff_folder)
@@ -81,22 +102,19 @@ class FBProject(object):
             self.force_field = forcebalance.forcefield.FF(self.ff_options)
             # load priors
             self.load_ff_prior()
+            # load previous opt_state
+            self.update_opt_state()
+        if os.path.exists(self.targets_folder):
             # load fb_targets
             self.load_fb_targets()
-            # load optimizer_options
-            self.load_optimizer_options()
-            # load previous opt_state
-            self.load_opt_state()
-            # load status
-            self.load_status()
-            # load optimize results
-            self.load_optimize_results()
+        # load optimizer_options
+        self.load_optimizer_options()
+        # update status
+        self.update_status()
 
+    @in_project_folder
     def setup_forcefield(self, data):
         """ Setup self.force_field """
-        assert self.project_folder, 'project_folder is not setup correctly'
-        # make sure we're at the project folder
-        os.chdir(self.project_folder)
         # create the "forcefield" folder if not exist
         if os.path.exists(self.ff_folder):
             shutil.rmtree(self.ff_folder)
@@ -111,21 +129,22 @@ class FBProject(object):
         # return success
         return 0
 
+    @in_project_folder
     def load_ff_prior(self):
-        """ Load the prior settings from JSON file """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
+        """ Load the prior settings from JSON file or an existing input file """
         prior_fn = os.path.join(self.conf_folder, 'ff_priors.json')
         if os.path.exists(prior_fn):
             with open(prior_fn) as jfile:
                 self.force_field.priors = json.load(jfile)
-            self.force_field.rsmake()
+        else:
+            # if the json file does not exist, try to load from the input file through executor
+            self.force_field.priors = copy.deepcopy(self._fbexecutor.input_options['priors'])
+        self.force_field.rsmake()
 
+    @in_project_folder
     def save_ff_prior(self):
         """ Save the prior settings as a JSON file """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
         assert hasattr(self, 'force_field'), 'self.force_field not created yet'
-        os.chdir(self.project_folder)
         if not os.path.exists(self.conf_folder):
             os.mkdir(self.conf_folder)
         prior_fn = os.path.join(self.conf_folder, 'ff_priors.json')
@@ -133,13 +152,11 @@ class FBProject(object):
             json.dump(self.force_field.priors, jfile, indent=4)
         print(f"force field priors of project <{self.name}> saved as {prior_fn}")
 
+    @in_project_folder
     def get_forcefield_info(self):
         """ return some information about self.force_field """
         if not hasattr(self, 'force_field'):
             return None
-        assert self.project_folder, 'project_folder is not setup correctly'
-        # make sure we're at the project folder
-        os.chdir(self.project_folder)
         # get content of all files
         raw_text = ''
         for filename in self.ff_options['forcefield']:
@@ -164,11 +181,9 @@ class FBProject(object):
         self.save_ff_prior()
         return 0
 
+    @in_project_folder
     def create_fitting_target(self, data):
         """ Add a fitting target to this project """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        # make sure we're at the project folder
-        os.chdir(self.project_folder)
         # create the "targets" folder if not exist
         if not os.path.exists(self.targets_folder):
             os.mkdir(self.targets_folder)
@@ -207,7 +222,7 @@ class FBProject(object):
             target_options.update({
                 'name': target_name,
                 'type': target_type,
-                'fileNames': data['fileNames'],
+                'weight': 1.0,
                 'coords': gro_filename,
                 'gmx_top': top_filename,
                 'gmx_mdp': mdp_filename,
@@ -217,7 +232,7 @@ class FBProject(object):
             target_options.update({
                 'name': target_name,
                 'type': target_type,
-                'fileNames': data['fileNames'],
+                'weight': 1.0,
                 'coords': coords_filename,
                 'mol2': [mol2_filename],
                 'pdb': pdb_filename,
@@ -281,10 +296,9 @@ class FBProject(object):
         # save target configure on disk
         self.save_fb_targets()
 
+    @in_project_folder
     def save_fb_targets(self):
         """ Save the fb_targets as a JSON file """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
         if not os.path.exists(self.conf_folder):
             os.mkdir(self.conf_folder)
         targets_fn = os.path.join(self.conf_folder, 'fb_targets.json')
@@ -292,17 +306,20 @@ class FBProject(object):
             json.dump(self.fb_targets, jfile, indent=4)
         print(f"Targets of project <{self.name}> saved as {targets_fn}")
 
+    @in_project_folder
     def load_fb_targets(self):
         """ Load the fb_targets from JSON file """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
         targets_fn = os.path.join(self.conf_folder, 'fb_targets.json')
         if os.path.exists(targets_fn):
             with open(targets_fn) as jfile:
                 self.fb_targets = json.load(jfile)
-            # make sure each existing target has its own folder
-            assert os.path.exists(self.targets_folder), 'targets/ folder missing!'
-            assert set(os.listdir(self.targets_folder)) == set(self.fb_targets.keys()), 'targets/ folder contents does not match configure!'
+        else:
+            # get target options from input file through executor
+            self.fb_targets = copy.deepcopy(self._fbexecutor.input_options['tgt_opts'])
+        # make sure each existing target has its own folder
+        assert os.path.exists(self.targets_folder), 'targets/ folder missing!'
+        missing_targets = set(self.fb_targets.keys()) - set(os.listdir(self.targets_folder))
+        assert len(missing_targets) == 0 , f'targets missing:\n {missing_targets}'
 
     def get_optimizer_options(self):
         return self.optimizer_options
@@ -316,10 +333,9 @@ class FBProject(object):
                     print(e)
         self.save_optimizer_options()
 
+    @in_project_folder
     def save_optimizer_options(self):
         """ Save self.optimizer_options as a JSON file """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
         if not os.path.exists(self.conf_folder):
             os.mkdir(self.conf_folder)
         fn = os.path.join(self.conf_folder, 'optimizer_options.json')
@@ -327,200 +343,103 @@ class FBProject(object):
             json.dump(self.optimizer_options, jfile, indent=4)
         print(f"Optimizer options of project <{self.name}> saved as {fn}")
 
+    @in_project_folder
     def load_optimizer_options(self):
         """ Load self.optimizer_options from a JSON file """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
         fn = os.path.join(self.conf_folder, 'optimizer_options.json')
         if os.path.exists(fn):
             with open(fn) as jfile:
                 self.optimizer_options = json.load(jfile)
+        else:
+            # get optimizer options from input files through executor
+            self.optimizer_options.update(self._fbexecutor.input_options['gen_opt'])
 
+    @in_project_folder
     def save_input_file(self):
-        # make sure we're in the project folder
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
-        # write the input file
-        with open(self.input_filename, 'w') as f:
-            f.write('$options\n')
-            for key, value in self.optimizer_options.items():
-                f.write(f"{key} {value}\n")
-            f.write('$end\n\n')
+        # set target option "remote" to True if using async evaluation
+        if self.optimizer_options.get('asynchronous'):
             for tgt_opts in self.fb_targets.values():
-                f.write('$target\n')
-                for key, value in tgt_opts.items():
-                    f.write(f"{key} {value}\n")
-                f.write('$end\n\n')
+                tgt_opts['remote'] = 1
+        # set forcefield in optimizer options
+        self.optimizer_options['forcefield'] = self.ff_options['forcefield']
+        # write the input file
+        self._fbexecutor.set_input_options(self.optimizer_options, self.force_field.priors, self.fb_targets)
+        self._fbexecutor.write_input_file()
 
+    @in_project_folder
     def launch_optimizer(self):
         # make sure optimizer is not running now
         assert self.status != self.project_status['running'], 'Optimizer is running, wait to finish before launching new'
-        # make sure we're in the project folder
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
-        # build objective
-        target_options = []
-        for opt in self.fb_targets.values():
-            tgt_opt = copy.deepcopy(forcebalance.parser.tgt_opts_defaults)
-            tgt_opt.update(opt)
-            # set target option "remote" to True if using async evaluation
-            tgt_opt['remote'] = self.optimizer_options['asynchronous']
-            target_options.append(tgt_opt)
-        gen_options = copy.deepcopy(forcebalance.parser.gen_opts_defaults)
-        gen_options.update(self.optimizer_options)
-        gen_options['root'] = self.project_folder
-        gen_options['input_file'] = self.input_filename
-        self.objective = forcebalance.objective.Objective(gen_options, target_options, self.force_field)
-        self.optimizer = forcebalance.optimizer.Optimizer(gen_options, self.objective, self.force_field)
-        # make sure optimizer.writechk() function is called, and make a breakpoint to save an opt state
-        self.optimizer.wchk_step = True
-        self.optimizer.writechk = self.notify_me(self.optimizer.writechk, 'writechk')
-        # generate input file for reproducibility
+        # clean up old runs
+        self.opt_state = {}
+        self._fbexecutor.clean_up()
+        # generate input file
         self.save_input_file()
-        # reset opt state
-        self.opt_state = dict()
-        # run optimizer
-        self.update_status('running')
-        t = threading.Thread(target=self.exec_launch_optimizer)
-        t.start()
+        # run the executor
+        self._fbexecutor.run()
 
-    def exec_launch_optimizer(self):
-        assert hasattr(self, 'optimizer'), 'self.optimizer not setup correctly'
-        with self.lock:
-            self.optimizer.Run()
-            self.update_status('finished')
-            self.collect_optimize_results()
 
-    def notify_me(self, func, msg):
-        """ Wrapper function to let self get notified when another function is called """
-        def f(*args, **kwargs):
-            self.notified(msg)
-            return func(*args, **kwargs)
-        return f
-
-    def notified(self, msg):
-        if msg == 'writechk':
-            print(f"@@@@ Notified by optimizer.writechk()")
-            self.update_opt_state()
-        else:
-            print(f"@@@@ NOTIFIED by {msg}")
-
-    def update_status(self, statusName):
+    def update_status(self):
         assert self._manager is not None, 'This project has not been connected to a manager yet'
-        assert statusName in self.project_status, f'Invalid statusName {statusName}'
-        self.status = self.project_status[statusName]
-        self.save_status()
+        status = self._fbexecutor.status.lower()
+        assert status in self.project_status, f'Invalid statusName {status}'
+        self.status = self.project_status[status]
         self._manager.update_status(self._name)
 
-    def save_status(self):
-        """ Save current self.status as a JSON file in outputs folder """
-        assert self.out_folder != None, 'self.out_folder not setup yet'
-        assert hasattr(self, 'status'), 'self.status not created yet'
-        os.chdir(self.project_folder)
-        if not os.path.exists(self.out_folder):
-            os.mkdir(self.out_folder)
-        fn = os.path.join(self.out_folder, 'status.json')
-        with open(fn, 'w') as jfile:
-            json.dump(self.status, jfile, indent=4)
-        print(f"status of project <{self.name}> saved as {fn}")
-
-    def load_status(self):
-        """ Load the status from JSON file """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
-        fn = os.path.join(self.out_folder, 'status.json')
-        if os.path.exists(fn):
-            with open(fn) as jfile:
-                self.status = json.load(jfile)
-
     def reset_optimizer(self):
+        self._fbexecutor.kill()
+        self._fbexecutor.clean_up()
         self.update_status('idle')
 
     def update_opt_state(self):
-        """ Update self.opt_iter and self.opt_state when notified by forcebalance """
-        self.opt_iter = self.optimizer.iteration
-        if self.opt_iter not in self.opt_state:
-            obj_dict = copy.deepcopy(self.objective.ObjDict)
-            chk = copy.deepcopy(self.optimizer.chk)
-            pvals = self.force_field.create_pvals(chk['xk'])
-            p_names = self.force_field.plist
-            prev_pvals = self.force_field.pvals0 if self.opt_iter == 1 else [self.opt_state[self.opt_iter-1]['paramUpdates'][p]['pval'] for p in p_names]
-            param_updates = {p_name: {'gradient': g, 'prev_pval': prev_v, 'pval': v} for p_name, g, prev_v, v in zip(p_names, chk['G'], prev_pvals, pvals)}
-            self.opt_state[self.opt_iter] = {
-                'iteration': self.opt_iter,
-                'objdict': obj_dict,
-                'paramUpdates': param_updates,
-            }
-            self.save_opt_state()
-            # notify the frontend about opt_iter + 1
-            self._manager.update_opt_state(self._name)
-
-    def save_opt_state(self):
-        """ Save current self.opt_state as a JSON file in outputs folder """
-        assert self.out_folder != None, 'self.out_folder not setup yet'
-        assert hasattr(self, 'opt_state'), 'self.opt_state not created yet'
-        os.chdir(self.project_folder)
-        if not os.path.exists(self.out_folder):
-            os.mkdir(self.out_folder)
-        fn = os.path.join(self.out_folder, 'opt_state.json')
-        with open(fn, 'w') as jfile:
-            json.dump(self.opt_state, jfile, indent=4)
-        print(f"opt_state of project <{self.name}> saved as {fn}")
-
-    def load_opt_state(self):
-        """ Load the opt_state from JSON file and set current iter """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
-        fn = os.path.join(self.out_folder, 'opt_state.json')
-        if os.path.exists(fn):
-            with open(fn) as jfile:
-                self.opt_state = json.load(jfile)
-        if self.opt_state:
-            self.opt_iter = max(self.opt_state.keys())
+        """ Update self.opt_state when notified by executor """
+        p_names = self.force_field.plist
+        for opt_iter in sorted(self._fbexecutor.obj_hist):
+            obj_dict = self._fbexecutor.obj_hist[opt_iter]
+            if opt_iter not in self.opt_state:
+                # compute param_updates
+                mvals = self._fbexecutor.mvals_hist[opt_iter]
+                pvals = self.force_field.create_pvals(mvals)
+                param_updates = {p_name: {'pval': v} for p_name, v in zip(p_names, pvals)}
+                for i_p, p_name in enumerate(p_names):
+                    param_updates[p_name]['prev_pval'] = self.force_field.pvals0[i_p] if opt_iter == 0 else self.opt_state[opt_iter-1]['paramUpdates'][p_name]['pval']
+                # compute "Total" for obj dict
+                obj_dict = copy.deepcopy(obj_dict)
+                obj_dict['Total'] = sum(v['x'] * v['w'] for v in obj_dict.values())
+                self.opt_state[opt_iter] = {
+                    'iteration': opt_iter,
+                    'objdict': copy.deepcopy(obj_dict),
+                    'paramUpdates': param_updates,
+                }
+        # notify the frontend about opt_iter + 1
+        self._manager.update_opt_state(self._name)
 
     def collect_optimize_results(self):
         """ Aggregate and return optimize results after finish """
         assert self.status == self.project_status['finished']
-        converged = not (self.optimizer.iteration >= self.optimizer.maxstep)
-        self.optimize_results = {
+        converged = not (self._fbexecutor.not_converged) if hasattr(self._fbexecutor, 'not_converged') else True
+        optimize_results = {
             'converged': converged,
-            'iteration': self.opt_iter,
-            'obj_values': [self.opt_state[i]['objdict']['Total'] for i in range(1, self.opt_iter+1)],
+            'iteration': len(self.opt_state),
+            'obj_values': [self.opt_state[i]['objdict']['Total'] for i in range(len(self.opt_state))],
         }
-        self.save_optimize_results()
+        return optimize_results
 
-    def save_optimize_results(self):
-        assert self.out_folder != None, 'self.out_folder not setup yet'
-        assert hasattr(self, 'optimize_results'), 'self.optimize_results not created yet'
-        os.chdir(self.project_folder)
-        if not os.path.exists(self.out_folder):
-            os.mkdir(self.out_folder)
-        fn = os.path.join(self.out_folder, 'optimize_results.json')
-        with open(fn, 'w') as jfile:
-            json.dump(self.optimize_results, jfile, indent=4)
-        print(f"optimize_results of project <{self.name}> saved as {fn}")
-
-    def load_optimize_results(self):
-        """ Load the optimize_results from JSON file """
-        assert self.project_folder != None, 'self.project_folder not setup yet'
-        os.chdir(self.project_folder)
-        fn = os.path.join(self.out_folder, 'optimize_results.json')
-        if os.path.exists(fn):
-            with open(fn) as jfile:
-                self.optimize_results = json.load(jfile)
-
+    @in_project_folder
     def get_final_forcefield_info(self):
         """ return some information about self.force_field """
         if not hasattr(self, 'force_field'):
             return None
         raw_text = ''
         for f in self.ff_options['forcefield']:
-            with open(os.path.join(self.result_folder, f)) as ff_file:
+            result_folder = os.path.join('result', 'fb')
+            with open(os.path.join(result_folder, f)) as ff_file:
                 raw_text += ff_file.read() + '\n\n'
+        last_opt_iter = len(self.opt_state) - 1
         return {
             'filenames': self.ff_options['forcefield'],
             'plist': list(self.force_field.plist),
-            'pvals': [self.opt_state[self.opt_iter]['paramUpdates'][pname]['pval'] for pname in self.force_field.plist],
+            'pvals': [self.opt_state[last_opt_iter]['paramUpdates'][pname]['pval'] for pname in self.force_field.plist],
             'priors': list(self.force_field.rs),
             'raw_text': raw_text,
             'prior_rules': list(self.force_field.priors.items()),
@@ -532,17 +451,18 @@ class FBProject(object):
         try:
             import work_queue
         except ImportError:
-            return {
+            data = {
                 'code': 'not_installed',
                 'description': 'work_queue module is not installed, please try forcebalance/tools/install-cctools-62.sh'
             }
-        # check if a work queue is created
-        wq = forcebalance.nifty.getWorkQueue()
-        if wq is None:
-            return {
+        if self.status == self.project_status['running']:
+            data = {
+                'code': 'running',
+                'description': 'work queue is in use.'
+            }
+            data.update(self._fbexecutor.get_workqueue_status())
+        else:
+            data = {
                 'code': 'ready',
             }
-        return {
-            'code': 'running',
-            'description': 'work queue is in use. Current ForceBalance implementation only allows using one work queue at a time.'
-        }
+        return data

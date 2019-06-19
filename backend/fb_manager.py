@@ -18,18 +18,16 @@ class FBManager:
         for projectName in os.listdir(self.root):
             pfolder = os.path.join(self.root, projectName)
             print(f"Found existing project at <{pfolder}>")
-            project = FBProject(projectName)
-            project.load_from_project_folder(pfolder)
+            self._projects[projectName] = project = FBProject(projectName)
             project.register_manager(self)
-            self._projects[projectName] = project
+            project.load_from_project_folder(pfolder)
 
     def create_project(self, projectName):
         assert projectName not in self._projects, f'Project name {projectName} is taken'
-        project = FBProject(projectName)
+        self._projects[projectName] = project = FBProject(projectName)
         project.register_manager(self)
         projectFolder = os.path.join(self.root, projectName)
         project.create_project_folder(projectFolder)
-        self._projects[projectName] = project
 
     def list_projects(self):
         return [{'projectName': p.name, 'status': p.status} for p in self._projects.values()]
@@ -115,7 +113,7 @@ class FBManager:
 
     def get_optimize_results(self, projectName):
         project = self._projects[projectName]
-        return project.optimize_results
+        return project.collect_optimize_results()
 
     def get_final_forcefield_info(self, projectName):
         project = self._projects[projectName]
