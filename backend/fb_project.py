@@ -288,6 +288,9 @@ class FBProject(object):
     def get_target_names(self):
         return list(self.fb_targets.keys())
 
+    def get_all_targets_info(self):
+        return self.fb_targets
+
     def get_target_options(self, target_name):
         return self.fb_targets[target_name]
 
@@ -359,7 +362,7 @@ class FBProject(object):
         # set target option "remote" to True if using async evaluation
         if self.optimizer_options.get('asynchronous'):
             for tgt_opts in self.fb_targets.values():
-                tgt_opts['remote'] = 1
+                tgt_opts['remote'] = True
         # set forcefield in optimizer options
         self.optimizer_options['forcefield'] = self.ff_options['forcefield']
         # write the input file
@@ -414,6 +417,9 @@ class FBProject(object):
         # notify the frontend about opt_iter + 1
         self._manager.update_opt_state(self._name)
 
+    def get_target_objective_data(self, target_name, opt_iter):
+        return self._fbexecutor.get_target_objective_data(target_name, opt_iter)
+
     def collect_optimize_results(self):
         """ Aggregate and return optimize results after finish """
         assert self.status == self.project_status['finished']
@@ -456,13 +462,23 @@ class FBProject(object):
                 'description': 'work_queue module is not installed, please try forcebalance/tools/install-cctools-62.sh'
             }
         if self.status == self.project_status['running']:
-            data = {
-                'code': 'running',
-                'description': 'work queue is in use.'
-            }
-            data.update(self._fbexecutor.get_workqueue_status())
+            code = 'running'
+            description = 'work queue is in use.'
         else:
-            data = {
-                'code': 'ready',
-            }
+            code = 'ready'
+            description = 'work queue is ready.'
+        data = {
+            'code': code,
+            'description': description,
+        }
+        data.update(self._fbexecutor.get_workqueue_status())
         return data
+
+    # @staticmethod
+    # def merge_options(source_dict, dest_dict):
+    #     """ merge all key-value pairs from source_dict to dest_dict, keep type consistent """
+    #     for key,value in dest_dict.items():
+    #         if key in source_dict:
+    #             vtype = type(value)
+    #             new_value = vtype(source_dict[key])
+    #             dest_dict[key] = new_value

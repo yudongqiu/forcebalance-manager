@@ -12,6 +12,7 @@ import copy
 import numpy as np
 
 from forcebalance.nifty import lp_load
+from forcebalance.parser import gen_opts_types, tgt_opts_types
 
 class FBExecutor:
     """ Class designed for executing ForceBalance in command line.
@@ -53,7 +54,12 @@ class FBExecutor:
         # read status from output file
         self.read_output_file()
         # store the status of work queue
-        self._workqueue_status = {}
+        self._workqueue_status = {
+            'worker_running': 0,
+            'worker_total': 0,
+            'job_finished': 0,
+            'job_total': 0
+        }
 
     def register_observer(self, observer):
         """ register an observer function to handle events """
@@ -62,38 +68,77 @@ class FBExecutor:
     def read_input_options(self):
         """ Read input options from self.input_file """
         if not os.path.exists(self.input_file): return
+        # aggregate the option types
+        gen_opt_type_mapping = {}
+        for type_name, type_opts in gen_opts_types.items():
+            for opt_name in type_opts:
+                vtype = int if type_name == 'ints' else \
+                        float if type_name == 'floats' else \
+                        bool if type_name == 'bools' else \
+                        str
+                gen_opt_type_mapping[opt_name] = vtype
+        tgt_opt_type_mapping = {}
+        for type_name, type_opts in tgt_opts_types.items():
+            for opt_name in type_opts:
+                vtype = int if type_name == 'ints' else \
+                        float if type_name == 'floats' else \
+                        bool if type_name == 'bools' else \
+                        str
+                tgt_opt_type_mapping[opt_name] = vtype
+        # start reading file
         with open(self.input_file) as f_in:
+            reading_dest_name = None
             reading_dest = None
             tgt_opt_list = []
             for line in f_in:
-                content = line.split('#', maxsplit=1)[0].strip().lower()
+                content = line.split('#', maxsplit=1)[0].strip()
                 if content:
-                    if content == '$options':
+                    content_lower = content.lower()
+                    if content_lower == '$options':
+                        reading_dest_name = 'gen_opt'
                         reading_dest = self.input_options['gen_opt']
-                    elif content == 'priors':
+                    elif content_lower == 'priors':
+                        reading_dest_name = 'priors'
                         reading_dest = self.input_options['priors']
-                    elif content == '/priors':
+                    elif content_lower == '/priors':
+                        reading_dest_name = 'gen_opt'
                         reading_dest = self.input_options['gen_opt']
-                    elif content == '$target':
+                    elif content_lower == '$target':
+                        reading_dest_name = 'tgt_opt'
                         reading_dest = {}
                         tgt_opt_list.append(reading_dest)
-                    elif content == '$end':
+                    elif content_lower == '$end':
+                        reading_dest_name = None
                         reading_dest = None
                     else:
                         ls = content.split()
-                        if len(ls) == 1:
-                            key, value = ls[0], True
-                        elif len(ls) == 2:
-                            key, value = ls[0], ls[1]
+                        key = ls[0]
+                        if reading_dest_name == 'priors':
+                            value = float(ls[-1])
                         else:
-                            key, value = ls[0], ls[1:]
-                        assert reading_dest is not None, f"Input line not in any block:\n{line}"
+                            if reading_dest_name == 'gen_opt':
+                                vtype = gen_opt_type_mapping[key]
+                            elif reading_dest_name == 'tgt_opt':
+                                vtype = tgt_opt_type_mapping[key]
+                            else:
+                                raise ValueError(f"Input line not in any block:\n{line}")
+                            if len(ls) == 1:
+                                assert vtype == bool
+                                value = True
+                            elif len(ls) == 2:
+                                if vtype == bool:
+                                    value = not (ls[1].lower() in {'0', 'false', 'no', 'off'})
+                                else:
+                                    value = vtype(ls[1])
+                            else:
+                                value = list(map(vtype, ls[1:]))
                         reading_dest[key] = value
         # insert all options from tgt_opt_list to self.input_options
         for tgt_opts in tgt_opt_list:
             name = tgt_opts.get('name')
             assert name, f"target name missing in {tgt_opts}"
             self.input_options['tgt_opts'][name] = tgt_opts
+        print(self.input_options['gen_opt'])
 
     def set_input_options(self, gen_opts, priors, tgt_opts):
         self.input_options['gen_opts'] = copy.deepcopy(gen_opts)
@@ -121,6 +166,9 @@ class FBExecutor:
             f.write('/priors\n')
             f.write('$end\n\n')
             for tgt_opts in self.input_options['tgt_opts'].values():
+                # make a copy and set a high writelevel for details
+                tgt_opts = copy.deepcopy(tgt_opts)
+                tgt_opts['writelevel'] = 3
                 f.write('$target\n')
                 for key, value in tgt_opts.items():
                     value_str = ' '.join(map(str, value)) if isinstance(value, (list, tuple)) else str(value)
@@ -181,6 +229,7 @@ class FBExecutor:
     def run(self):
         """ Start the ForceBalance run in subprocess """
         assert os.path.exists(self.input_file), f'ForceBalance input file {self.input_file} does not exist'
+        self.status = "RUNNING"
         self.proc = subprocess.Popen(['ForceBalance', f'{self.prefix}.in'], cwd=self.root_folder, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.obj_hist = {}
         self.mvals_hist = {}
@@ -255,3 +304,37 @@ class FBExecutor:
             'job_finished': job_finished,
             'job_total': job_total
         }
+        print(f"work queue status updated {self._workqueue_status}")
+
+    def get_target_objective_data(self, target_name, opt_iter):
+        """ Read objective data for a target and an optimization iteration from the tmp folder """
+        res = {}
+        target_options = self.input_options['tgt_opts'].get(target_name, None)
+        if target_options is None:
+            res['error'] = f"target {target_name} not found"
+            print(f"get_target_objective_data: {res['error']}")
+            return res
+        # check the tmp folder for this target
+        folder = os.path.join(self.tmp_folder, target_name, f'iter_{opt_iter:04d}')
+        if not os.path.isdir(folder):
+            res['error'] = f"tmp folder {folder} not found"
+            print(f"get_target_objective_data: {res['error']}")
+            return res
+        # get target type specific objective information
+        target_type = target_options['type']
+        if target_type.lower().startswith('abinitio'):
+            energy_compare_file = os.path.join(folder, 'EnergyCompare.txt')
+            if not os.path.isfile(energy_compare_file):
+                res['error'] = f"file {energy_compare_file} not found"
+                print(f"get_target_objective_data: {res['error']}")
+                return res
+            energy_compare_data = np.loadtxt(energy_compare_file)
+            res['qm_energies'] = energy_compare_data[:, 0].tolist()
+            res['mm_energies'] = energy_compare_data[:, 1].tolist()
+            res['diff'] = energy_compare_data[:, 2].tolist()
+            res['weights'] = energy_compare_data[:, 3].tolist()
+        else:
+            res['error'] = f"get objective data for target type {target_type} not implemented"
+            print(f"get_target_objective_data: {res['error']}")
+            return res
+        return res

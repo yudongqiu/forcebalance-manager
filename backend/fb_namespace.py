@@ -57,6 +57,10 @@ class FBNamespace(Namespace):
         print(f"socketIO: Received command get_target_names for project <{projectName}>")
         return self._manager.get_target_names(projectName)
 
+    def on_get_all_targets_info(self, projectName):
+        print(f"socketIO: Received command get_all_targets_info for project <{projectName}>")
+        return self._manager.get_all_targets_info(projectName)
+
     def on_get_target_options(self, projectName, targetName):
         print(f"socketIO: Received command get_target_options for project <{projectName}> target <{targetName}>")
         return self._manager.get_target_options(projectName, targetName)
@@ -76,6 +80,10 @@ class FBNamespace(Namespace):
     def on_get_optimizer_state(self, projectName):
         print(f"socketIO: Received get_optimizer_state command for project {projectName}")
         return self._manager.get_optimizer_state(projectName)
+
+    def on_get_target_objective_data(self, projectName, targetName, optIter):
+        print(f"socketIO: Received command get_target_objective_data for project <{projectName}> target <{targetName}> iteration <{optIter}>")
+        return self._manager.get_target_objective_data(projectName, targetName, optIter)
 
     def on_get_optimize_results(self, projectName):
         print(f"socketIO: Received get_optimize_results command for project {projectName}")

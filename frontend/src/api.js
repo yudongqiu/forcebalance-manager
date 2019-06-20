@@ -121,6 +121,12 @@ class ForceBalanceAPI {
         }
     }
 
+    getAllTargetsInfo(callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_all_targets_info', this.projectName, (data) => {callback(data)});
+        }
+    }
+
     getTargetOptions(targetName, callback) {
         if (this.projectName !== null) {
             this.socket.emit('get_target_options', this.projectName, targetName, (data) => {callback(data)});
@@ -154,6 +160,12 @@ class ForceBalanceAPI {
     getOptimizeResults(callback) {
         if (this.projectName !== null) {
             this.socket.emit('get_optimize_results', this.projectName, (data) => {callback(data)});
+        }
+    }
+
+    getTargetObjectiveData(targetName, optIter, callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_target_objective_data', this.projectName, targetName, optIter, (data) => {callback(data)});
         }
     }
 

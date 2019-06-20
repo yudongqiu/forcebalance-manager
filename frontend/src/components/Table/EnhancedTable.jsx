@@ -26,10 +26,19 @@ function createData(name, calories, fat, carbs, protein) {
 }
 
 function desc(a, b, orderBy) {
-  if (b[orderBy] < a[orderBy]) {
+  // if (b[orderBy] < a[orderBy]) {
+  //   return -1;
+  // }
+  // if (b[orderBy] > a[orderBy]) {
+  //   return 1;
+  // }
+  // return 0;
+  const a_v = isNaN(a[orderBy]) ? a[orderBy] : parseFloat(a[orderBy]);
+  const b_v = isNaN(b[orderBy]) ? b[orderBy] : parseFloat(b[orderBy]);
+  if (b_v < a_v) {
     return -1;
   }
-  if (b[orderBy] > a[orderBy]) {
+  if (b_v > a_v) {
     return 1;
   }
   return 0;
@@ -167,14 +176,14 @@ class EnhancedTable extends React.Component {
                 .map(rd => {
                   return (
                     <TableRow
-                      hover={handleRowClick}
+                      hover={Boolean(handleRowClick)}
                       onClick={handleRowClick? (event => handleRowClick(event, rd[0])) : null}
                       key={rd[0]}
                     >
                     {rd.map((v,idx) => {
                       return (
                         <TableCell key={rd[0] + idx}>
-                          {parseFloat(v) ? parseFloat(v).toFixed(4) : v}
+                          {parseFloat(v)===v ? parseFloat(v).toFixed(4) : v}
                         </TableCell>
                       )
                     })}
@@ -202,6 +211,7 @@ class EnhancedTable extends React.Component {
           }}
           onChangePage={this.handleChangePage}
           onChangeRowsPerPage={this.handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 25, 50, 100]}
         />
       </Paper>
     );

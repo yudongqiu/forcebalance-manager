@@ -84,6 +84,10 @@ class FBManager:
         project = self._projects[projectName]
         return project.get_target_names()
 
+    def get_all_targets_info(self, projectName):
+        project = self._projects[projectName]
+        return project.get_all_targets_info()
+
     def get_target_options(self, projectName, targetName):
         project = self._projects[projectName]
         return project.get_target_options(targetName)
@@ -110,6 +114,10 @@ class FBManager:
     def get_optimizer_state(self, projectName):
         project = self._projects[projectName]
         return project.opt_state
+
+    def get_target_objective_data(self, projectName, targetName, optIter):
+        project = self._projects[projectName]
+        return project.get_target_objective_data(targetName, optIter)
 
     def get_optimize_results(self, projectName):
         project = self._projects[projectName]
