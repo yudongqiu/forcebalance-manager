@@ -40,7 +40,7 @@ class FBProject(object):
         self.fb_targets = dict()
         # some default optimizer options that matches forcebalance.parser.gen_opts_types
         self.optimizer_options = {
-            'jobtype': 'NEWTON',
+            'jobtype': 'OPTIMIZE',
             'maxstep': 10,
             'penalty_type': 'L2',
             'convergence_objective': 1e-4,
@@ -65,6 +65,8 @@ class FBProject(object):
             self.update_status()
         elif event == 'iter_update':
             self.update_opt_state()
+        elif event == 'work_queue_update':
+            self._manager.update_work_queue_status(self._name)
         else:
             print(f"Observed unrecognized event {event}")
 

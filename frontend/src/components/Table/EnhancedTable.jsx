@@ -107,10 +107,10 @@ EnhancedTableHead.propTypes = {
 const styles = theme => ({
   root: {
     width: '100%',
-    marginTop: theme.spacing.unit * 3,
+    marginTop: '10px',
   },
   table: {
-    minWidth: 700,
+    minWidth: 300,
   },
   tableWrapper: {
     overflowX: 'auto',

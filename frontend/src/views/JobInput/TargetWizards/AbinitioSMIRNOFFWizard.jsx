@@ -98,7 +98,6 @@ class AbinitioSMIRNOFFWizard extends React.Component {
     qdataFileName: '',
     coordsFileName: '',
     targetType: 'ABINITIO_SMIRNOFF',
-    mviewFile: null,
     mol2Data: null,
     pdbData: null,
     qdataData: null,
@@ -130,7 +129,6 @@ class AbinitioSMIRNOFFWizard extends React.Component {
     if (file) {
       this.setState({
         coordsFileName: file.name,
-        mviewFile: file,
       });
       this.coordsFile = file;
       api.validate_target_file(this.props.targetName, this.state.targetType, [file], 'coords', this.updateCoordsValidationResult);
@@ -266,7 +264,7 @@ class AbinitioSMIRNOFFWizard extends React.Component {
   render() {
     const { classes } = this.props;
     const { activeStep, completed, coordsFileName, qdataFileName, mol2FileName, pdbFileName,
-      mviewFile, coordsData, qdataData, mol2Data, pdbData, finalData, confirmDialogOpen } = this.state;
+      coordsData, qdataData, mol2Data, pdbData, finalData, confirmDialogOpen } = this.state;
 
     const minfo = [];
     if (activeStep >= 0) {
@@ -336,7 +334,7 @@ class AbinitioSMIRNOFFWizard extends React.Component {
       minfo.push(pdbInfoCard);
     }
     const pdbString = coordsData? coordsData.pdbString : null;
-    const mview = <MoleculeViewer file={mviewFile} pdbString={pdbString} />;
+    const mview = <MoleculeViewer pdbString={pdbString} />;
 
     const coordsUploadPage = (
       <div className={classes.fullWidth} >

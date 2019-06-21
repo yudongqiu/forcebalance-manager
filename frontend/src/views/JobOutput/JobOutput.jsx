@@ -39,8 +39,11 @@ const styles = {
   },
   title: {
     fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
-    paddingBottom: "20px",
+    paddingBottom: "10px",
     fontSize: "30px",
+  },
+  table: {
+    paddingTop: "5px",
   }
 }
 
@@ -144,8 +147,8 @@ class JobOutput extends React.Component {
 
     // objective details dialog views
     const TargetObjectiveView = targetObjectiveViews[dialogTargetType];
-    const TargetObjectiveDialog = dialogOpen ? (<Dialog open={dialogOpen} maxWidth='md' fullWidth scroll='body'>
-      <TargetObjectiveView targetName={dialogTargetName} optIter={currentIter} onClose={this.handleCloseDialog}/>
+    const TargetObjectiveDialog = dialogOpen ? (<Dialog open={dialogOpen} maxWidth='lg' fullWidth scroll='body'>
+      <TargetObjectiveView targetName={dialogTargetName} optIter={currentIter} onClose={this.handleCloseDialog} maxIter={lastIter}/>
     </Dialog>) : <div/>;
 
     // get target names that has available objective views
@@ -166,10 +169,14 @@ class JobOutput extends React.Component {
           {(currentIter !== null && optimizerState[currentIter]) ?
             <Grid>
               <GridItem xs={12} sm={12} md={12}>
-                <ObjectiveTable objdict={optimizerState[currentIter].objdict} handleRowClick={this.handleObjectiveRowClick} targetsWithObjectiveViews={targetsWithObjectiveViews}/>
+                <div className={classes.table}>
+                  <ObjectiveTable objdict={optimizerState[currentIter].objdict} handleRowClick={this.handleObjectiveRowClick} targetsWithObjectiveViews={targetsWithObjectiveViews}/>
+                </div>
               </GridItem>
               <GridItem xs={12} sm={12} md={12}>
-                <GradientsTable data={optimizerState[currentIter].paramUpdates} />
+                <div className={classes.table}>
+                  <GradientsTable data={optimizerState[currentIter].paramUpdates} />
+                </div>
               </GridItem>
             </Grid> :
             "Optimization running"

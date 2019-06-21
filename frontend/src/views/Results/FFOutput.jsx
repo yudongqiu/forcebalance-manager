@@ -23,8 +23,10 @@ import GridItem from "components/Grid/GridItem.jsx";
 import CustomInput from "components/CustomInput/CustomInput.jsx";
 import Button from "components/CustomButtons/Button.jsx";
 import Table from "components/Table/Table.jsx";
+import EnhancedTable from "components/Table/EnhancedTable";
 // Models
 import api from "../../api";
+import { Paper } from "@material-ui/core";
 
 const styles = {
   input: {
@@ -34,6 +36,9 @@ const styles = {
     marginBottom: 16,
     fontSize: 14,
   },
+  section: {
+    marginBottom: 15,
+  }
 };
 
 class FFOutput extends React.Component {
@@ -81,23 +86,37 @@ class FFOutput extends React.Component {
     }
   }
 
+  downloadForceFieldFile = () => {
+    const { fileName, ffText } = this.state;
+    const element = document.createElement("a");
+    const file = new Blob([ffText], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = fileName;
+    document.body.appendChild(element); // Required for this to work in FireFox
+    element.click();
+  }
+
   render () {
     const { classes } = this.props;
     const { fileName, ffText, paramNames, paramValues, paramPriors, paramPriorRules } = this.state;
-    const isValidPriorRules = paramPriorRules.every((rule) => {return rule[0] && rule[1] && !isNaN(rule[1])});
 
     return (
       <CardContent>
-        {fileName}
-        {paramNames && paramNames.length > 0 ?
-          <Table
-            tableHeaderColor="primary"
-            tableHead={["#", "Parameter", "Value", "Prior Width"]}
-            tableData={paramNames.map((name, index) => {
-              return [(index+1).toString(), name, paramValues[index].toString(), paramPriors[index].toString()]
-            })} />
-          : null
-        }
+        <div className={classes.section}>
+            {fileName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <Button onClick={this.downloadForceFieldFile} color='success'>Download</Button>
+        </div>
+        <div className={classes.section}>
+          {paramNames && paramNames.length > 0 ?
+            <EnhancedTable
+              tableHead={["#", "Parameter", "Value", "Prior Width"]}
+              data={paramNames.map((name, index) => {
+                return [(index+1).toString(), name, paramValues[index].toString(), paramPriors[index].toString()]
+              })}
+              title="Final Force Field Parameters"
+            />: "No parameters found"
+          }
+        </div>
         {ffText ?
           <ExpansionPanel>
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>

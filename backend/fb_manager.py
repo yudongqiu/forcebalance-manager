@@ -115,6 +115,13 @@ class FBManager:
         project = self._projects[projectName]
         return project.opt_state
 
+    def update_work_queue_status(self, projectName):
+        """ trigger the frontend to pull new work queue status """
+        print(f"socketIO: updating project <{projectName}> work_queue_status")
+        fb_ns.emit('update_work_queue_status', {
+            'projectName': projectName,
+        })
+
     def get_target_objective_data(self, projectName, targetName, optIter):
         project = self._projects[projectName]
         return project.get_target_objective_data(targetName, optIter)

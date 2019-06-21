@@ -99,9 +99,9 @@ class OptimizerInput extends React.Component {
                   onChange={this.handleSetOption}
                   input={<Input name="jobtype" id="job-type" />}
                 >
-                  <MenuItem value={"newton"}>Optimize</MenuItem>
-                  <MenuItem value={"single"}>Single</MenuItem>
-                  <MenuItem value={"gradient"}>Gradient</MenuItem>
+                  <MenuItem value={"OPTIMIZE"}>Optimize</MenuItem>
+                  <MenuItem value={"SINGLE"}>Single</MenuItem>
+                  <MenuItem value={"GRADIENT"}>Gradient</MenuItem>
                 </Select>
               </FormControl>
             </GridItem>
@@ -128,8 +128,8 @@ class OptimizerInput extends React.Component {
                   onChange={this.handleSetOption}
                   input={<Input name="penalty_type" id="penalty-type" />}
                 >
-                  <MenuItem value={"l1"}>L1</MenuItem>
-                  <MenuItem value={"l2"}>L2</MenuItem>
+                  <MenuItem value={"L1"}>L1</MenuItem>
+                  <MenuItem value={"L2"}>L2</MenuItem>
                 </Select>
               </FormControl>
             </GridItem>
@@ -185,7 +185,7 @@ class OptimizerInput extends React.Component {
                 label="Trust Radius"
                 onChange={this.handleSetOption}
                 value={trust0}
-                error={trust0 <= 0}
+                error={isNaN(trust0)}
                 fullWidth
                 InputLabelProps={{
                   shrink: true,

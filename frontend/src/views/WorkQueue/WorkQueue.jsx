@@ -83,7 +83,9 @@ const styles = {
 
 class WorkQueue extends React.Component {
   state = {
-    wqStatus: { code: 'not_connected', description: 'server not connected' }
+    wqStatus: { code: 'not_connected', description: 'server not connected' },
+    lastUpdateTime: new Date(),
+    timePassed: 0,
   }
 
   update = () => {
@@ -99,24 +101,37 @@ class WorkQueue extends React.Component {
   updateWorkQueueStatus = (data) => {
     this.setState({
       wqStatus: data,
+      lastUpdateTime: new Date(),
     })
+  }
+
+  updateTimePassed = () => {
+    if (this.state.lastUpdateTime !== null) {
+      this.setState({
+        timePassed: Math.round((new Date() - this.state.lastUpdateTime) / 1000),
+      });
+    }
   }
 
   componentDidMount() {
     api.onChangeProjectName(this.update);
     this.update();
     api.register('update_status', this.updateStatus);
+    api.register('update_work_queue_status', this.update);
     api.pullStatus();
+    this.timer = setInterval(this.updateTimePassed, 1000);
   }
 
   componentWillUnmount() {
     api.removeOnChangeProjectName(this.update);
     api.unregister('update_status', this.updateStatus);
+    api.unregister('update_work_queue_status', this.update);
+    clearInterval(this.timer);
   }
 
   render() {
     const { classes } = this.props;
-    const { status, wqStatus } = this.state;
+    const { status, wqStatus, timePassed } = this.state;
     // display ready status if not running
     let readyButton = <Button variant="outlined" color="secondary">
       not ready
@@ -160,10 +175,10 @@ class WorkQueue extends React.Component {
               <h3 className={classes.cardTitle}>{wqStatus.worker_running}</h3>
             </CardHeader>
             <CardFooter stats>
-                <div className={classes.stats}>
-                  <Update />
-                  Just Updated
-                </div>
+              <div className={classes.stats}>
+                <Update />
+                Updated {timePassed}s ago
+              </div>
               </CardFooter>
           </Card>
         </GridItem>
@@ -179,7 +194,7 @@ class WorkQueue extends React.Component {
             <CardFooter stats>
               <div className={classes.stats}>
                 <Update />
-                Just Updated
+                Updated {timePassed}s ago
               </div>
             </CardFooter>
           </Card>
@@ -196,7 +211,7 @@ class WorkQueue extends React.Component {
             <CardFooter stats>
               <div className={classes.stats}>
                 <Update />
-                Just Updated
+                Updated {timePassed}s ago
               </div>
             </CardFooter>
           </Card>
@@ -213,7 +228,7 @@ class WorkQueue extends React.Component {
             <CardFooter stats>
               <div className={classes.stats}>
                 <Update />
-                Just Updated
+                Updated {timePassed}s ago
               </div>
             </CardFooter>
           </Card>

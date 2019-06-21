@@ -31,10 +31,12 @@ class AbinitioGMXValidator(TargetValidator):
         self.gro_filename = filename
         try:
             m = Molecule(self.gro_filename)
+            pdb_string = '\n'.join(m.write_pdb(range(m.na)))
             ret = {
                 'success': True,
                 'n_shots': len(m),
                 'n_atoms': m.na,
+                'pdbString': pdb_string,
             }
         except Exception as e:
             print(e)

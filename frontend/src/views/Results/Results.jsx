@@ -16,13 +16,8 @@ import FFOutput from "./FFOutput.jsx";
 // models
 import api from "../../api";
 import { RunningStatus } from "../../constants";
-
-// css for overwriting the "white chart" in material-dashboard-react.css
-
-import "./chart.css";
-
-var Chartist = require("chartist");
-require("chartist-plugin-axistitle");
+// plotly
+import Plot from 'react-plotly.js';
 
 
 const styles = {
@@ -45,11 +40,13 @@ class Results extends React.Component {
   }
 
   componentDidMount() {
+    api.onChangeProjectName(this.fetch);
     api.register('update_status', this.updateStatus);
     api.pullStatus();
   }
 
   componentWillUnmount() {
+    api.removeOnChangeProjectName(this.fetch);
     api.unregister('update_status', this.updateStatus);
   }
 
@@ -81,7 +78,6 @@ class Results extends React.Component {
       did not converge
     </Button>;
     let totalIterButton = <Button variant="outlined" > 0 </Button>;
-    let chart = null;
     // (optimizeResults.converged)?
     if (optimizeResults && optimizeResults.converged) {
       convergeButton = <Button variant="outlined" color="primary">
@@ -91,86 +87,27 @@ class Results extends React.Component {
     if (optimizeResults && optimizeResults.iteration) {
       totalIterButton = <Button variant="fab" color="primary" mini>{optimizeResults.iteration}</Button>;
     }
+    // optimize objective plot
+    let objPlot = <div />;
     if (optimizeResults && optimizeResults.obj_values) {
-      const objChart = {
-        data: {
-          labels: Array(optimizeResults.obj_values.length).fill().map((x, i) => i + 1),
-          series: [optimizeResults.obj_values],
-        },
-        options: {
-          height: '300px',
-          lineSmooth: Chartist.Interpolation.cardinal({
-            tension: 0
-          }),
-          low: 0,
-          high: Math.max(optimizeResults.obj_values),
-          chartPadding: {
-            top: 0,
-            right: 0,
-            bottom: 30,
-            left: 20
+      const xValues = [...Array(optimizeResults.obj_values.length).keys()];
+      objPlot = <Plot
+        data={[
+          {
+            x: xValues,
+            y: optimizeResults.obj_values,
+            type: 'bar',
+            name: 'Objective Values',
           },
-          plugins: [
-            Chartist.plugins.ctAxisTitle({
-              axisX: {
-                axisTitle: 'Iterations',
-                axisClass: 'ct-axis-title',
-                offset: {
-                  x: 0,
-                  y: 40
-                },
-                textAnchor: 'middle'
-              },
-              axisY: {
-                axisTitle: 'Objective Value',
-                axisClass: 'ct-axis-title',
-                offset: {
-                  x: 0,
-                  y: 0
-                },
-                textAnchor: 'middle',
-                flipTitle: false
-              }
-            })
-          ],
-        },
-        animation: {
-          draw: function (data) {
-            if (data.type === "line" || data.type === "area") {
-              data.element.animate({
-                d: {
-                  begin: 200,
-                  dur: 700,
-                  from: data.path
-                    .clone()
-                    .scale(1, 0)
-                    .translate(0, data.chartRect.height())
-                    .stringify(),
-                  to: data.path.clone().stringify(),
-                  easing: Chartist.Svg.Easing.easeOutQuint
-                }
-              });
-            } else if (data.type === "point") {
-              data.element.animate({
-                opacity: {
-                  begin: (data.index + 1) * 50,
-                  dur: 300,
-                  from: 0,
-                  to: 1,
-                  easing: "ease"
-                }
-              });
-            }
-          }
-        }
-      };
-      chart = <ChartistGraph
-        className="ct-chart"
-        data={objChart.data}
-        type="Line"
-        options={objChart.options}
-        listener={objChart.animation}
-      />
+          {
+            x: xValues,
+            y: optimizeResults.obj_values,
+            mode: 'line',
+            name: 'Objective Values',
+          },
+        ]}
+        style={{ width: '100%', height: '100%' }}
+      />;
     }
 
     return <div>
@@ -179,7 +116,7 @@ class Results extends React.Component {
           Optimization {convergeButton} in {totalIterButton} iterations
         </CardContent>
         <CardContent>
-          {chart}
+          {objPlot}
         </CardContent>
       </Card>
       <Card className={classes.card}>

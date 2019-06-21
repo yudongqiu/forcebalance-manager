@@ -98,7 +98,6 @@ class AbinitioGMXWizard extends React.Component {
     mdpFileName: '',
     topFileName: '',
     targetType: 'ABINITIO_GMX',
-    mviewFile: null,
     groData: null,
     qdataData: null,
     mdpData: null,
@@ -130,7 +129,6 @@ class AbinitioGMXWizard extends React.Component {
     if (file) {
       this.setState({
         groFileName: file.name,
-        mviewFile: file,
       });
       this.groFile = file;
       api.validate_target_file(this.props.targetName, this.state.targetType, [file], 'gro', this.updateGroValidationResult);
@@ -266,7 +264,7 @@ class AbinitioGMXWizard extends React.Component {
   render() {
     const { classes } = this.props;
     const { activeStep, completed, groFileName, qdataFileName, mdpFileName, topFileName,
-      mviewFile, groData, qdataData, mdpData, topData, finalData, confirmDialogOpen } = this.state;
+      groData, qdataData, mdpData, topData, finalData, confirmDialogOpen } = this.state;
 
     const minfo = [];
     if (activeStep >= 0) {
@@ -336,7 +334,8 @@ class AbinitioGMXWizard extends React.Component {
       minfo.push(topInfoCard);
     }
 
-    const mview = <MoleculeViewer file={mviewFile} />;
+    const pdbString = groData? groData.pdbString : null;
+    const mview = <MoleculeViewer pdbString={pdbString} title={groFileName}/>;
 
     const groUploadPage = (
       <div className={classes.fullWidth} >

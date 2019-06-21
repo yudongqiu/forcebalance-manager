@@ -18,7 +18,7 @@ const styles = {
     backgroundColor: '#EEEEEE',
   },
   viewer: {
-    height: 300,
+    minHeight: "300px",
   },
   title: {
     fontWeight: 400,
@@ -36,7 +36,7 @@ const styles = {
   sliderText: {
     width: '20%',
   },
-}
+};
 
 class MoleculeViewer extends React.Component {
   state = {
@@ -51,8 +51,6 @@ class MoleculeViewer extends React.Component {
     if (this.props.pdbString) {
       var stringBlob = new Blob( [ this.props.pdbString ], { type: 'text/plain' } );
       this.stage.loadFile( stringBlob, { ext: "pdb", defaultRepresentation: true, asTrajectory: true }).then( this.loadTraj );
-    } else if (this.props.file) {
-      this.stage.loadFile(this.props.file, {defaultRepresentation: true, asTrajectory: true}).then( this.loadTraj );
     }
   }
 
@@ -65,15 +63,14 @@ class MoleculeViewer extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (prevProps.pdbString !== this.props.pdbString) {
+    if (this.props.pdbString && this.props.pdbString !== prevProps.pdbString) {
       this.stage.removeAllComponents();
       var stringBlob = new Blob( [ this.props.pdbString ], { type: 'text/plain' } );
       this.stage.loadFile( stringBlob, { ext: "pdb", defaultRepresentation: true, asTrajectory: true }).then( this.loadTraj );
     }
-    // else if (prevProps.file !== this.props.file) {
-    //   this.stage.removeAllComponents();
-    //   this.stage.loadFile(this.props.file, {defaultRepresentation: true, asTrajectory: true}).then( this.loadTraj );
-    // }
+    if (prevProps.frame !== this.props.frame) {
+      this.setTrajFrame(this.props.frame);
+    }
   }
 
   componentWillUnmount() {
@@ -81,12 +78,12 @@ class MoleculeViewer extends React.Component {
   }
 
   setTrajFrame = (frame) => {
-    frame = Math.max(frame, 1);
+    frame = Math.max(frame, 0);
     if (this.state.numFrames) {
-      frame = Math.min(frame, this.state.numFrames)
+      frame = Math.min(frame, this.state.numFrames-1)
     }
     if (this.traj) {
-      this.traj.setFrame(frame-1);
+      this.traj.setFrame(frame);
     }
     this.setState({
       currFrame: frame,
@@ -105,19 +102,22 @@ class MoleculeViewer extends React.Component {
   }
 
   render() {
-    const { classes } = this.props;
+    const { classes, className } = this.props;
     const { numAtoms, numFrames, currFrame } = this.state;
     const enableTrajControl = (numFrames && numFrames > 1);
-    const fileInfo = this.props.file ? this.props.file.name + " | " + numAtoms + " Atoms | " + numFrames + " Frames" : "File not loaded";
+    let title = (this.props.title? this.props.title : '') + " | " + numAtoms + " Atoms | " + numFrames + " Frames";
+    if (!this.props.pdbString) {
+      title = 'Data not loaded';
+    }
     return (
       <Paper className={classes.paper}>
           <div className={classes.title}>
-            {fileInfo}
+            {title}
           </div>
           <div id="viewport" className={classes.viewer} />
           <div className={classes.sliderWrapper} >
             <div className={classes.slider} >
-              <Slider min={1} max={numFrames} onChange={this.setTrajFrame} disabled={!enableTrajControl} />
+              <Slider min={0} max={numFrames-1} onChange={this.setTrajFrame} value={currFrame} disabled={!enableTrajControl} />
             </div>
             <div className={classes.sliderText} >
               <TextField
@@ -141,8 +141,10 @@ class MoleculeViewer extends React.Component {
 
 MoleculeViewer.propTypes = {
   classes: PropTypes.object.isRequired,
-  file: PropTypes.object,
   pdbString: PropTypes.string,
+  title: PropTypes.string,
+  frame: PropTypes.number,
+  className: PropTypes.string,
 };
 
 export default withStyles(styles)(MoleculeViewer);

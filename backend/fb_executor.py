@@ -13,6 +13,7 @@ import numpy as np
 
 from forcebalance.nifty import lp_load
 from forcebalance.parser import gen_opts_types, tgt_opts_types
+from forcebalance.molecule import Molecule
 
 class FBExecutor:
     """ Class designed for executing ForceBalance in command line.
@@ -30,14 +31,13 @@ class FBExecutor:
     def status(self, value):
         assert value in self.STATUS_SET, f'Invalid status value. Choices are: {self.STATUS_SET}'
         self._status = value
-        if self.observer is not None:
-            self.observer('status_update')
+        self.notify_observer('status_update')
 
     def __init__(self, root_folder, interval=1, prefix='fb'):
         self.root_folder = root_folder
         self.interval = interval
         self.prefix = prefix
-        self.observer = None
+        self._observer = None
         # some file names
         self.checkpoint_fnm = 'checkpoint.p'
         self.input_file = os.path.join(self.root_folder, prefix+'.in')
@@ -63,7 +63,12 @@ class FBExecutor:
 
     def register_observer(self, observer):
         """ register an observer function to handle events """
-        self.observer = observer
+        self._observer = observer
+
+    def notify_observer(self, msg):
+        """ Notify the observer by a message """
+        if self._observer is not None:
+            self._observer(msg)
 
     def read_input_options(self):
         """ Read input options from self.input_file """
@@ -137,13 +142,26 @@ class FBExecutor:
         for tgt_opts in tgt_opt_list:
             name = tgt_opts.get('name')
             assert name, f"target name missing in {tgt_opts}"
+            # ensure all targets has the weight option
+            tgt_opts.setdefault('weight', 1.0)
+            # ensure all target types are upper case
+            tgt_opts['type'] = tgt_opts['type'].upper()
             self.input_options['tgt_opts'][name] = tgt_opts
+        # ensure the gen_opt['jobtype'] is uppercase and OPTIMIZE instead of NEWTON
+        jobtype = self.input_options['gen_opt']['jobtype'].upper()
+        if jobtype == 'NEWTON':
+            jobtype = "OPTIMIZE"
+        self.input_options['gen_opt']['jobtype'] = jobtype
+        # ensure penalty type is uppercase
+        penalty_type = self.input_options['gen_opt'].get('penalty_type')
+        if penalty_type is not None:
+            self.input_options['gen_opt']['penalty_type'] = penalty_type.upper()
         print(self.input_options['gen_opt'])
 
     def set_input_options(self, gen_opts, priors, tgt_opts):
-        self.input_options['gen_opts'] = copy.deepcopy(gen_opts)
-        self.input_options['priors'] = copy.deepcopy(priors)
-        self.input_options['tgt_opts'] = copy.deepcopy(tgt_opts)
+        self.input_options['gen_opts'].update(gen_opts)
+        self.input_options['priors'].update(priors)
+        self.input_options['tgt_opts'].update(tgt_opts)
 
     def write_input_file(self):
         """ Write self.input_options as an input file """
@@ -240,7 +258,7 @@ class FBExecutor:
         # check stdout and stderr pipes, send data to frontend
         for line in self.proc.stdout:
             line = line.decode()
-            if 'Input file with saved parameters' in line:
+            if 'Writing the checkpoint file' in line:
                 self.get_iter_update()
             elif "Calculation Finished." in line:
                 self.status = 'FINISHED'
@@ -263,7 +281,7 @@ class FBExecutor:
         self.status = 'IDLE'
 
     def get_iter_update(self):
-        """ Read the tmp folder during running, get updated information and trigger self.observer """
+        """ Read the tmp folder during running, get updated information and trigger observer """
         # update self.obj_hist
         opt_iter = len(self.obj_hist)
         self.obj_hist[opt_iter] = {}
@@ -275,8 +293,7 @@ class FBExecutor:
         first_target_name = next(iter(self.input_options['tgt_opts']))
         self.mvals_hist[opt_iter] = np.loadtxt(os.path.join(self.tmp_folder, first_target_name, f'iter_{opt_iter:04d}', 'mvals.txt'))
         # trigger observer
-        if self.observer is not None:
-            self.observer('iter_update')
+        self.notify_observer('iter_update')
 
     def load_target_objective(self, target_name, opt_iter):
         folder = os.path.join(self.tmp_folder, target_name, f'iter_{opt_iter:04d}')
@@ -305,6 +322,7 @@ class FBExecutor:
             'job_total': job_total
         }
         print(f"work queue status updated {self._workqueue_status}")
+        self.notify_observer('work_queue_update')
 
     def get_target_objective_data(self, target_name, opt_iter):
         """ Read objective data for a target and an optimization iteration from the tmp folder """
@@ -323,6 +341,7 @@ class FBExecutor:
         # get target type specific objective information
         target_type = target_options['type']
         if target_type.lower().startswith('abinitio'):
+            # read energy compare data
             energy_compare_file = os.path.join(folder, 'EnergyCompare.txt')
             if not os.path.isfile(energy_compare_file):
                 res['error'] = f"file {energy_compare_file} not found"
@@ -333,6 +352,14 @@ class FBExecutor:
             res['mm_energies'] = energy_compare_data[:, 1].tolist()
             res['diff'] = energy_compare_data[:, 2].tolist()
             res['weights'] = energy_compare_data[:, 3].tolist()
+            # read molecule geometry
+            mol_file = os.path.join(folder, 'coords.xyz')
+            m = Molecule(mol_file)
+            # generate pdb string
+            if 'resname' not in m.Data:
+                m.Data['resname'] = ['MOL'] * m.na
+                m.Data['resid'] = [1] * m.na
+            res['pdbString'] = '\n'.join(m.write_pdb(range(m.na)))
         else:
             res['error'] = f"get objective data for target type {target_type} not implemented"
             print(f"get_target_objective_data: {res['error']}")
