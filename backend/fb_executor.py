@@ -205,23 +205,28 @@ class FBExecutor:
         t0 = time.time()
         self.obj_hist = {}
         self.mvals_hist = {}
-        if not os.path.exists(self.tmp_folder): return
-        for tgt_folder in os.listdir(self.tmp_folder):
-            if tgt_folder == 'forcefield-remote': continue
-            assert tgt_folder in self.input_options['tgt_opts'], f"Target {tgt_folder} in tmp folder not exist in {self.input_options['tgt_opts']}"
-            tgt_folder_path = os.path.join(self.tmp_folder, tgt_folder)
+        if not os.path.exists(self.tmp_folder):
+            print(f"tmp folder {self.tmp_folder} not found")
+            return
+        # read information for each target
+        target_names = self.input_options['tgt_opts'].keys()
+        for target_name in target_names:
+            tgt_folder_path = os.path.join(self.tmp_folder, target_name)
             for iter_folder in os.listdir(tgt_folder_path):
                 iter_folder_path = os.path.join(tgt_folder_path, iter_folder)
                 if os.path.isdir(iter_folder_path) and iter_folder.startswith('iter_'):
                     opt_iter = int(iter_folder.split('_')[1])
                     # read objective.p
-                    target_name = tgt_folder
                     target_objective = self.load_target_objective(target_name, opt_iter)
                     if target_objective is not None:
                         # create obj_hist item if not exist
                         self.obj_hist.setdefault(opt_iter, {})
-                        # put targets objective value into opt_states
-                        self.obj_hist[opt_iter][target_name] = {'x': target_objective['X'], 'w': float(self.input_options['tgt_opts'][target_name]['weight'])}
+                        # put targets objective value, weight and gradients into obj_hist
+                        self.obj_hist[opt_iter][target_name] = {
+                            'x': target_objective['X'],
+                            'w': float(self.input_options['tgt_opts'][target_name]['weight']),
+                            'grad': target_objective['G'],
+                        }
                         # load mval value into mval_hist if not exist
                         if opt_iter not in self.mvals_hist:
                             self.mvals_hist[opt_iter] = np.loadtxt(os.path.join(iter_folder_path, 'mvals.txt'))
@@ -296,7 +301,11 @@ class FBExecutor:
         self.obj_hist[opt_iter] = {}
         for target_name, tgt_options in self.input_options['tgt_opts'].items():
             target_objective = self.load_target_objective(target_name, opt_iter)
-            self.obj_hist[opt_iter][target_name] = {'x': target_objective['X'], 'w': float(tgt_options['weight'])}
+            self.obj_hist[opt_iter][target_name] = {
+                'x': target_objective['X'],
+                'w': float(tgt_options['weight']),
+                'grad': target_objective['G'],
+            }
         # update self.mvals_hist
         assert len(self.mvals_hist) == opt_iter, f'mvals_hist length {len(self.mvals_hist)} not consistent with obj_hist length {opt_iter}'
         first_target_name = next(iter(self.input_options['tgt_opts']))

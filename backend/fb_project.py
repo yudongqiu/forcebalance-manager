@@ -5,6 +5,7 @@ import shutil
 import json
 import copy
 import tempfile
+import numpy as np
 
 import forcebalance
 
@@ -407,19 +408,50 @@ class FBProject(object):
                 param_updates = {p_name: {'pval': v} for p_name, v in zip(p_names, pvals)}
                 for i_p, p_name in enumerate(p_names):
                     param_updates[p_name]['prev_pval'] = self.force_field.pvals0[i_p] if opt_iter == 0 else self.opt_state[opt_iter-1]['paramUpdates'][p_name]['pval']
-                # compute "Total" for obj dict
-                obj_dict = copy.deepcopy(obj_dict)
-                obj_dict['Total'] = sum(v['x'] * v['w'] for v in obj_dict.values())
+                # compute "Total" for obj dict by weighted-sum
+                obj_total = sum((v['x'] * v['w']) for v in obj_dict.values())
+                # compute total gradients for each parameter by weighted-sum and add penalty term
+                obj_gradients = sum((v['grad'] * v['w']) for v in obj_dict.values())
+                x_add, g_add = self.get_penalty_x_g(mvals, obj_total, obj_gradients)
+                obj_total += x_add
+                obj_gradients += g_add
+                for i_p, p_name in enumerate(p_names):
+                    param_updates[p_name]['gradient'] = obj_gradients[i_p]
+                # remove grad before sending data
+                send_obj_dict = copy.deepcopy(obj_dict)
+                for v in send_obj_dict.values():
+                    v.pop('grad')
                 self.opt_state[opt_iter] = {
                     'iteration': opt_iter,
-                    'objdict': copy.deepcopy(obj_dict),
+                    'objTotal': obj_total,
+                    'objdict': send_obj_dict,
                     'paramUpdates': param_updates,
                 }
         # notify the frontend about opt_iter + 1
         self._manager.update_opt_state(self._name)
 
+    def get_penalty_x_g(self, mvals, obj_total, obj_gradients):
+        """ Compute penalty add term in the consistent way with ForceBalance """
+        if not hasattr(self, '_fb_objective'):
+            # create an ForceBalance Objective
+            gen_opts = copy.deepcopy(self.optimizer_options)
+            # avoid creating work queue
+            gen_opts['wq_port'] = 0
+            self._fb_objective = forcebalance.objective.Objective(gen_opts, {}, self.force_field)
+        # the hessian is faked for now since it doesn't affect gradient
+        objective_dict = {'X': obj_total, 'G': obj_gradients, 'H': np.eye(len(obj_gradients))}
+        x_add, g_add, h_add = self._fb_objective.Penalty.compute(mvals, objective_dict)
+        return x_add, g_add
+
     def get_target_objective_data(self, target_name, opt_iter):
-        return self._fbexecutor.get_target_objective_data(target_name, opt_iter)
+        data = self._fbexecutor.get_target_objective_data(target_name, opt_iter)
+        # add parameter names and gradients for this target
+        obj_dict = self._fbexecutor.obj_hist[opt_iter]
+        data.update({
+            'p_names': self.force_field.plist,
+            'gradients': obj_dict[target_name]['grad'].tolist(),
+        })
+        return data
 
     def collect_optimize_results(self):
         """ Aggregate and return optimize results after finish """

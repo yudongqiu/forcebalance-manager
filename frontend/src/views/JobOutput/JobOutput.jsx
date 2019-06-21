@@ -170,7 +170,7 @@ class JobOutput extends React.Component {
             <Grid>
               <GridItem xs={12} sm={12} md={12}>
                 <div className={classes.table}>
-                  <ObjectiveTable objdict={optimizerState[currentIter].objdict} handleRowClick={this.handleObjectiveRowClick} targetsWithObjectiveViews={targetsWithObjectiveViews}/>
+                  <ObjectiveTable optstate={optimizerState[currentIter]} handleRowClick={this.handleObjectiveRowClick} targetsWithObjectiveViews={targetsWithObjectiveViews}/>
                 </div>
               </GridItem>
               <GridItem xs={12} sm={12} md={12}>
@@ -196,7 +196,8 @@ JobOutput.propTypes = {
 export default withStyles(styles)(JobOutput);
 
 function ObjectiveTable(props) {
-  const objdict = props.objdict;
+  const objdict = props.optstate.objdict;
+  const objTotal = props.optstate.objTotal;
   const rows = [];
   for (const objName in objdict) {
     const w = objdict[objName].w;
@@ -205,17 +206,14 @@ function ObjectiveTable(props) {
     if (props.targetsWithObjectiveViews && (objName in props.targetsWithObjectiveViews)) {
       hasObjView =  <InsertChartIcon />;
     }
-    if (objName !== 'Total') {
-      rows.push([objName, hasObjView, w, x, w*x]);
-    } else {
-      rows.push([objName, '', '', '', objdict[objName]]);
-    }
+    rows.push([objName, hasObjView, w, x, w*x]);
   }
+  const title = "Objective Breakdown ( Total + Penalty = " + parseFloat(objTotal).toFixed(4) + " )";
   return (
     <EnhancedTable
       tableHead={["Target", "Details", "Weight", "Objective", "Contribution"]}
       data={rows}
-      title="Objective Breakdown"
+      title={title}
       handleRowClick={props.handleRowClick}
     />
   );
