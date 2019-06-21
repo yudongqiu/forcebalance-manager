@@ -152,10 +152,17 @@ class FBExecutor:
         if jobtype == 'NEWTON':
             jobtype = "OPTIMIZE"
         self.input_options['gen_opt']['jobtype'] = jobtype
-        # ensure penalty type is uppercase
+        # ensure penalty_type is uppercase
         penalty_type = self.input_options['gen_opt'].get('penalty_type')
         if penalty_type is not None:
             self.input_options['gen_opt']['penalty_type'] = penalty_type.upper()
+        # ensure forcefield is in a list
+        ff_fnms = self.input_options['gen_opt']['forcefield']
+        if isinstance(ff_fnms, str):
+            self.input_options['gen_opt']['forcefield'] = [ff_fnms]
+        # check if normalize_weights is set, we don't support this yet
+        if self.input_options['gen_opt'].get('normalize_weights') is True:
+            raise ValueError("normalize_weights is not supported yet")
         print(self.input_options['gen_opt'])
 
     def set_input_options(self, gen_opts, priors, tgt_opts):
@@ -195,6 +202,7 @@ class FBExecutor:
 
     def read_tmp_folder(self):
         """ Update self.obj_hist and self.mval_hist by reading tmp folder """
+        t0 = time.time()
         self.obj_hist = {}
         self.mvals_hist = {}
         if not os.path.exists(self.tmp_folder): return
@@ -217,6 +225,7 @@ class FBExecutor:
                         # load mval value into mval_hist if not exist
                         if opt_iter not in self.mvals_hist:
                             self.mvals_hist[opt_iter] = np.loadtxt(os.path.join(iter_folder_path, 'mvals.txt'))
+        print(f"@@ read_tmp_folder finished ({time.time() - t0:.2f} s)")
 
     def read_output_file(self):
         """ Read output file to determine current status """

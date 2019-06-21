@@ -99,14 +99,16 @@ class Results extends React.Component {
             type: 'bar',
             name: 'Objective Values',
           },
-          {
-            x: xValues,
-            y: optimizeResults.obj_values,
-            mode: 'line',
-            name: 'Objective Values',
-          },
         ]}
         style={{ width: '100%', height: '100%' }}
+        layout={{
+          xaxis: {
+            title: 'Iteration'
+          },
+          yaxis: {
+            title: 'Objective Function Value'
+          }
+        }}
       />;
     }
 

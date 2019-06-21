@@ -30,7 +30,6 @@ class FBProject(object):
     def __init__(self, name='Project'):
         self._name = name
         self.status = self.project_status['idle']
-        self._options = dict()
         self._manager = None
         self.lock = threading.Lock()
         self.project_folder = None
@@ -97,9 +96,11 @@ class FBProject(object):
         # create fbexecutor
         self._fbexecutor = FBExecutor(self.project_folder, prefix='fb')
         self._fbexecutor.register_observer(self.observe_executor)
+        # load optimizer_options
+        self.load_optimizer_options()
         # load self.force_field
         if os.path.exists(self.ff_folder):
-            ff_fnames = os.listdir(self.ff_folder)
+            ff_fnames = self.optimizer_options['forcefield'] if 'forcefield' in self.optimizer_options else os.listdir(self.ff_folder)
             self.ff_options = {'forcefield': ff_fnames}
             self.force_field = forcebalance.forcefield.FF(self.ff_options)
             # load priors
@@ -109,8 +110,6 @@ class FBProject(object):
         if os.path.exists(self.targets_folder):
             # load fb_targets
             self.load_fb_targets()
-        # load optimizer_options
-        self.load_optimizer_options()
         # update status
         self.update_status()
 
