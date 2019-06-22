@@ -218,10 +218,26 @@ class AbinitioObjectiveView extends React.Component {
         data={rows}
         title="Objective Breakdown"
         handleRowClick={this.handleTableRowClick}
+        key="table-objective"
       />
     </div>;
 
-    const tabContents = [scatterPlotPage, linePlotPage, tablePage];
+    const gradData = [];
+    if (objectiveData && objectiveData.gradients && objectiveData.plist) {
+      for (let i = 0; i < objectiveData.gradients.length; i++) {
+        gradData.push([objectiveData.plist[i], objectiveData.gradients[i]]);
+      }
+    }
+    const gradientsPage = <div>
+      <EnhancedTable
+        tableHead={["Parameter", "Gradient"]}
+        data={gradData}
+        title="Contribution to Objective Gradients"
+        key="table-gradients"
+      />
+  </div>;
+
+    const tabContents = [scatterPlotPage, linePlotPage, tablePage, gradientsPage];
 
     const mview = <MoleculeViewer pdbString={objectiveData? objectiveData.pdbString:null} title={'Geometries'} frame={currFrame}/>;
 
@@ -251,6 +267,7 @@ class AbinitioObjectiveView extends React.Component {
             <Tab value={0} label="QM vs MM Scatter Plot"/>
             <Tab value={1} label="QM vs MM Line Plot" />
             <Tab value={2} label="QM vs MM Table" />
+            <Tab value={3} label="Gradients Table" />
           </Tabs>
           <div style={{ width: '100%', overflow: 'auto', paddingTop: 15 }} >
             <div style={{ float: 'left', width: '60%', overflow: 'auto' }} >
@@ -270,7 +287,7 @@ AbinitioObjectiveView.propTypes = {
   classes: PropTypes.object.isRequired,
   targetName: PropTypes.string.isRequired,
   optIter: PropTypes.number.isRequired,
-  onClose: PropTypes.any,
+  onClose: PropTypes.func,
   maxIter: PropTypes.number,
 };
 

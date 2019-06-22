@@ -448,7 +448,7 @@ class FBProject(object):
         # add parameter names and gradients for this target
         obj_dict = self._fbexecutor.obj_hist[opt_iter]
         data.update({
-            'p_names': self.force_field.plist,
+            'plist': self.force_field.plist,
             'gradients': obj_dict[target_name]['grad'].tolist(),
         })
         return data
@@ -460,7 +460,7 @@ class FBProject(object):
         optimize_results = {
             'converged': converged,
             'iteration': len(self.opt_state),
-            'obj_values': [self.opt_state[i]['objdict']['Total'] for i in range(len(self.opt_state))],
+            'obj_values': [self.opt_state[i]['objTotal'] for i in range(len(self.opt_state))],
         }
         return optimize_results
 
@@ -478,6 +478,7 @@ class FBProject(object):
         return {
             'filenames': self.ff_options['forcefield'],
             'plist': list(self.force_field.plist),
+            'pvals0': list(self.force_field.pvals0),
             'pvals': [self.opt_state[last_opt_iter]['paramUpdates'][pname]['pval'] for pname in self.force_field.plist],
             'priors': list(self.force_field.rs),
             'raw_text': raw_text,

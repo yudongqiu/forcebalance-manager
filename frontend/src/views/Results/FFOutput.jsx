@@ -26,7 +26,9 @@ import Table from "components/Table/Table.jsx";
 import EnhancedTable from "components/Table/EnhancedTable";
 // Models
 import api from "../../api";
-import { Paper } from "@material-ui/core";
+import { Paper, Dialog } from "@material-ui/core";
+
+import ParamChangeView from "./ParamChangeView";
 
 const styles = {
   input: {
@@ -45,10 +47,12 @@ class FFOutput extends React.Component {
   state = {
     fileName: '',
     paramNames: [],
+    paramInitValues: [],
     paramValues: [],
     paramPriors: [],
     ffText: null,
     paramPriorRules: [],
+    dialogOpen: false,
   }
 
   componentDidMount() {
@@ -69,6 +73,7 @@ class FFOutput extends React.Component {
       this.setState({
         fileName: data.filenames[0],
         paramNames: data.plist,
+        paramInitValues: data.pvals0,
         paramValues: data.pvals,
         paramPriors: data.priors,
         ffText: data.raw_text,
@@ -78,6 +83,7 @@ class FFOutput extends React.Component {
       this.setState({
         fileName: '',
         paramNames: [],
+        paramInitValues: [],
         paramValues: [],
         paramPriors: [],
         ffText: null,
@@ -96,14 +102,34 @@ class FFOutput extends React.Component {
     element.click();
   }
 
+  handleOpenParamChangeDialog = () => {
+    this.setState({
+      dialogOpen: true,
+    })
+  }
+
+  handleCloseParamChangeDialog = () => {
+    this.setState({
+      dialogOpen: false,
+    })
+  }
+
   render () {
     const { classes } = this.props;
-    const { fileName, ffText, paramNames, paramValues, paramPriors, paramPriorRules } = this.state;
+    const { fileName, ffText, paramNames, paramInitValues, paramValues, paramPriors, paramPriorRules, dialogOpen } = this.state;
+
+    // plot the init vs final param values
+    const ParamChangeViewDialog = dialogOpen ? (<Dialog open={dialogOpen} maxWidth='lg' fullWidth scroll='body' onClose={this.handleCloseParamChangeDialog}>
+      <ParamChangeView paramNames={paramNames} paramInitValues={paramInitValues} paramFinalValues={paramValues} paramPriors={paramPriors} onClose={this.handleCloseParamChangeDialog}/>
+    </Dialog>) : <div/>;
 
     return (
       <CardContent>
         <div className={classes.section}>
-            {fileName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            {fileName}
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <Button onClick={this.handleOpenParamChangeDialog} color='primary'>View Parameter Change</Button>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <Button onClick={this.downloadForceFieldFile} color='success'>Download</Button>
         </div>
         <div className={classes.section}>
@@ -111,7 +137,7 @@ class FFOutput extends React.Component {
             <EnhancedTable
               tableHead={["#", "Parameter", "Value", "Prior Width"]}
               data={paramNames.map((name, index) => {
-                return [(index+1).toString(), name, paramValues[index].toString(), paramPriors[index].toString()]
+                return [index.toString(), name, paramValues[index], paramPriors[index]]
               })}
               title="Final Force Field Parameters"
             />: "No parameters found"
@@ -164,6 +190,7 @@ class FFOutput extends React.Component {
           </ExpansionPanel>
           : null
         }
+        {ParamChangeViewDialog}
       </CardContent>
     );
   }

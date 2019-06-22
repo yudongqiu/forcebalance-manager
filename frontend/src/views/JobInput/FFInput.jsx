@@ -232,7 +232,7 @@ class FFInput extends React.Component {
           <EnhancedTable
             tableHead={["#", "Parameter", "Value", "Prior Width"]}
             data={paramNames.map((name, index) => {
-              return [(index+1).toString(), name, paramValues[index].toString(), paramPriors[index].toString()]
+              return [index.toString(), name, paramValues[index], paramPriors[index]]
             })}
             title="Force Field Parameters"
           />
