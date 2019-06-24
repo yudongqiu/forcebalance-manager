@@ -53,8 +53,7 @@ class FFInput extends React.Component {
       this.setState({
         fileName: file.name,
       });
-      api.uploadForceFieldFile(file);
-      this.update();
+      api.uploadForceFieldFile(file, this.update);
     }
   }
 
@@ -223,7 +222,7 @@ class FFInput extends React.Component {
               </Grid>
             </ExpansionPanelDetails>
             <ExpansionPanelActions>
-              <Button color="info" onClick={this.applyPriorRules} disabled={!isValidPriorRules}>Apply</Button>
+              <Button color="primary" variant="contained" onClick={this.applyPriorRules} disabled={!isValidPriorRules}>Apply</Button>
         </ExpansionPanelActions>
           </ExpansionPanel>
           : null

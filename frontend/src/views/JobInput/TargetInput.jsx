@@ -32,13 +32,16 @@ import GridItem from "components/Grid/GridItem.jsx";
 import CustomInput from "components/CustomInput/CustomInput.jsx";
 import Button from "components/CustomButtons/Button.jsx";
 import Table from "components/Table/Table.jsx";
-import FBtarget from "./FBtarget";
+// import FBtarget from "./FBtarget";
+import EnhancedTable from "components/Table/EnhancedTable";
 // Models
 import api from "../../api";
 import { RunningStatus } from "../../constants";
 
 import AbinitioGMXWizard from "./TargetWizards/AbinitioGMXWizard.jsx";
 import AbinitioSMINORFFWizard from "./TargetWizards/AbinitioSMIRNOFFWizard.jsx";
+import AbinitioGMXOptions from "./TargetOptions/AbinitioGMXOptions.jsx";
+import AbinitioSMINORFFOptions from "./TargetOptions/AbinitioSMINORFFOptions.jsx";
 
 const styles = {
   input: {
@@ -60,13 +63,22 @@ const targetWizards = {
   'ABINITIO_SMIRNOFF': AbinitioSMINORFFWizard,
 }
 
+const targetOptionsPage = {
+  'ABINITIO_GMX': AbinitioGMXOptions,
+  'ABINITIO_SMIRNOFF': AbinitioSMINORFFOptions,
+}
+
+
 class TargetInput extends React.Component {
   state = {
-    targetNames: [],
+    targetsInfo: {},
     dialogOpen: false,
     dialogTargetName: '',
     dialogTargetType: '',
     wizardOpen: false,
+    optDialogTargetName: '',
+    optDialogTargetType: '',
+    optDialogOpen: false,
   }
 
   componentDidMount() {
@@ -79,19 +91,13 @@ class TargetInput extends React.Component {
   }
 
   update = () => {
-    api.getTargetNames(this.updateTargetNames);
+    api.getAllTargetsInfo(this.updateTargetsInfo);
   }
 
-  updateTargetNames = (data) => {
-    if (data) {
-      this.setState({
-        targetNames: data,
-      });
-    } else {
-      this.setState({
-        targetNames: [],
-      })
-    }
+  updateTargetsInfo = (data) => {
+    this.setState({
+      targetsInfo: data,
+    });
   }
 
   handleOpenDialog = () => {
@@ -145,11 +151,32 @@ class TargetInput extends React.Component {
     })
   }
 
+  handleTargetRowClick = (event, targetIndex) => {
+    const { targetsInfo } = this.state;
+    const targetNames = Object.keys(targetsInfo);
+    if (targetIndex < targetNames.length) {
+      const targetName = targetNames[targetIndex];
+      const targetOptions = targetsInfo[targetName];
+      this.setState({
+        optDialogTargetName: targetName,
+        optDialogTargetType: targetOptions.type,
+        optDialogOpen: true,
+      })
+    }
+  }
+
+  handleCloseTgtOptDialog = () => {
+    this.setState({
+      optDialogOpen: false,
+    })
+    this.update();
+  }
+
   render() {
     const { classes } = this.props;
-    const { targetNames, dialogOpen, dialogTargetName, dialogTargetType, wizardOpen } = this.state;
+    const { targetsInfo, dialogOpen, dialogTargetName, dialogTargetType, wizardOpen, optDialogTargetName, optDialogTargetType, optDialogOpen } = this.state;
     const isRunning = (this.props.status === RunningStatus.running);
-    const targetNameExists = (targetNames.indexOf(dialogTargetName) !== -1);
+    const targetNameExists = dialogTargetName in targetsInfo;
     const isValidTargetName = /^\w+$/.test(dialogTargetName);
     const validTargetTypes = Object.keys(targetWizards);
 
@@ -208,23 +235,29 @@ class TargetInput extends React.Component {
       <Wizard targetName={dialogTargetName} onClose={this.handleCloseWizard} onCreate={this.handleCreateTarget}/>
     </Dialog>) : <div/>;
 
+    // load existing targets to table
+    let targetTableData = [];
+    let i_target = 0;
+    for (let [targetName, targetOptions] of Object.entries(targetsInfo)) {
+      targetTableData.push([i_target.toString(), targetName, targetOptions.type, targetOptions.weight])
+      i_target += 1;
+    }
+    // click to open target options dialog
+    const TargetOptionsView = targetOptionsPage[optDialogTargetType];
+    const targetOptsDialog = optDialogOpen ? (
+      <Dialog open={optDialogOpen} maxWidth='lg' fullWidth scroll='body'>
+        <TargetOptionsView targetName={optDialogTargetName} onClose={this.handleCloseTgtOptDialog}/>
+      </Dialog>
+    ) : <div/>;
+
     return (<Card>
       <CardContent>
         <div className={classes.title}>Add targets then click to change target options</div>
-        <Grid container className={classes.header}>
-          <GridItem xs={5} sm={5} md={5}>
-            <div>Name</div>
-          </GridItem>
-          <GridItem xs={4} sm={4} md={4}>
-            <div>Type</div>
-          </GridItem>
-          <GridItem xs={3} sm={3} md={3}>
-            <div>Weight</div>
-          </GridItem>
-        </Grid>
-        {targetNames.map(name => {
-          return <FBtarget name={name} disabled={isRunning} handleDeleteTarget={this.handleDeleteTarget} key={name} />;
-        })}
+        <EnhancedTable
+          tableHead={["#", "Name", "Type", "Weight"]}
+          data={targetTableData}
+          handleRowClick={this.handleTargetRowClick}
+        />
         <Button
           onClick={this.handleOpenDialog}
           disabled={isRunning}
@@ -236,6 +269,7 @@ class TargetInput extends React.Component {
       </CardContent>
       {createDialog}
       {wizardDialog}
+      {targetOptsDialog}
     </Card>);
   }
 }

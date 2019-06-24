@@ -22,4 +22,7 @@ class TargetValidator:
             shutil.rmtree(self._tempd)
 
     def copy_ffdir(self, orig_root, ffdir):
+        tmp_ff_folder_path = os.path.join(self._tempd, ffdir)
+        if os.path.isdir(tmp_ff_folder_path):
+            shutil.rmtree(tmp_ff_folder_path)
         shutil.copytree(os.path.join(orig_root, ffdir), os.path.join(self._tempd, ffdir))

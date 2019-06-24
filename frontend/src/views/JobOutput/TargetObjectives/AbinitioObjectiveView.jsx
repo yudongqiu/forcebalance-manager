@@ -30,6 +30,7 @@ const styles = {
 
 class AbinitioObjectiveView extends React.Component {
   state = {
+    targetData: null,
     objectiveData: null,
     currFrame: 0,
     tabValue: 0,
@@ -51,12 +52,24 @@ class AbinitioObjectiveView extends React.Component {
         optIter: this.props.optIter,
       })
     }
-    if (prevState.targetName !== this.state.targetName || prevState.optIter !== this.state.optIter) {
-      const { targetName, optIter } = this.state;
-      if (targetName != null && !isNaN(optIter)) {
-        api.getTargetObjectiveData(targetName, optIter, this.updateObjectiveData);
-      }
+    if (prevState.targetName !== this.state.targetName && this.state.targetName) {
+      api.getTargetData(this.state.targetName, this.updateTargetData);
     }
+    if (prevState.optIter !== this.state.optIter && !isNaN(this.state.optIter)) {
+      api.getTargetObjectiveData(this.state.targetName, this.state.optIter, this.updateObjectiveData);
+    }
+    // if (prevState.targetName !== this.state.targetName || prevState.optIter !== this.state.optIter) {
+    //   const { targetName, optIter } = this.state;
+    //   if (targetName != null && !isNaN(optIter)) {
+    //     api.getTargetObjectiveData(targetName, optIter, this.updateObjectiveData);
+    //   }
+    // }
+  }
+
+  updateTargetData = (data) => {
+    this.setState({
+      targetData: data,
+    })
   }
 
   updateObjectiveData = (data) => {
@@ -103,7 +116,7 @@ class AbinitioObjectiveView extends React.Component {
 
   render() {
     const { classes } = this.props;
-    const { objectiveData, currFrame, tabValue, targetName, optIter } = this.state;
+    const { targetData, objectiveData, currFrame, tabValue, targetName, optIter } = this.state;
 
     // render scatter plot page
     let scatterPlot = <div />;
@@ -154,6 +167,7 @@ class AbinitioObjectiveView extends React.Component {
             t:60,
             b:40,
           },
+          hovermode: 'closest',
         } }
         onClick={this.handlePlotClick}
       />;
@@ -187,7 +201,7 @@ class AbinitioObjectiveView extends React.Component {
         layout={ {
           title: 'QM vs. MM Line Plot',
           xaxis: {
-            title: 'Configurations',
+            title: 'Frame Number',
           },
           yaxis: {
             title: 'Relative Energies [ kcal/mol ]',
@@ -199,6 +213,7 @@ class AbinitioObjectiveView extends React.Component {
             t:60,
             b:40,
           },
+          hovermode: 'closest',
         } }
         onClick={this.handlePlotClick}
       />;
@@ -239,7 +254,7 @@ class AbinitioObjectiveView extends React.Component {
 
     const tabContents = [scatterPlotPage, linePlotPage, tablePage, gradientsPage];
 
-    const mview = <MoleculeViewer pdbString={objectiveData? objectiveData.pdbString:null} title={'Geometries'} frame={currFrame}/>;
+    const mview = <MoleculeViewer pdbString={targetData? targetData.pdbString:null} title={'Geometries'} frame={currFrame}/>;
 
     return (
       <Card>

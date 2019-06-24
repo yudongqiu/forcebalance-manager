@@ -96,6 +96,10 @@ class FBManager:
         project = self._projects[projectName]
         return project.set_target_options(targetName, targetOptions)
 
+    def get_target_data(self, projectName, targetName):
+        project = self._projects[projectName]
+        return project.get_target_data(targetName)
+
     def get_optimizer_options(self, projectName):
         project = self._projects[projectName]
         return project.get_optimizer_options()

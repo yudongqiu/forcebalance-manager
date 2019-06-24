@@ -3,6 +3,7 @@ import copy
 import forcebalance
 from forcebalance.molecule import Molecule
 from forcebalance.gmxio import edit_mdp
+from forcebalance.nifty import which
 from backend.target_validators.target_validator import TargetValidator
 
 class AbinitioGMXValidator(TargetValidator):
@@ -93,6 +94,20 @@ class AbinitioGMXValidator(TargetValidator):
     def test_create(self, ff):
         gen_opts = copy.deepcopy(forcebalance.parser.gen_opts_defaults)
         gen_opts['root'] = self._tempd
+        # find gromacs exec
+        gmx_path = which('gmx_d') or which('mdrun_d')
+        if gmx_path:
+            gmx_suffix = '_d'
+        else:
+            gmx_path = which('gmx') or which('mdrun')
+            gmx_suffix = ''
+        if not gmx_path:
+            ret = {'success': False, 'error': 'gromacs executable not found'}
+            return ret
+        gen_opts.update({
+            'gmxpath': gmx_path,
+            'gmxsuffix': gmx_suffix,
+        })
         tgt_opts = copy.deepcopy(forcebalance.parser.tgt_opts_defaults)
         tgt_opts.update({
             'name': self.name,

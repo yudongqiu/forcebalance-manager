@@ -81,14 +81,14 @@ class ForceBalanceAPI {
         }
     }
 
-    uploadForceFieldFile(file) {
+    uploadForceFieldFile(file, callback) {
         if (this.projectName !== null) {
             this.socket.emit('upload_ff_file', this.projectName, {
                 fileName: file.name,
                 fileType: file.type,
                 fileSize: file.size,
                 fileData: file
-            });
+            }, (data) => callback(data));
         }
     }
 
@@ -124,6 +124,12 @@ class ForceBalanceAPI {
     getAllTargetsInfo(callback) {
         if (this.projectName !== null) {
             this.socket.emit('get_all_targets_info', this.projectName, (data) => {callback(data)});
+        }
+    }
+
+    getTargetData(targetName, callback) {
+        if (this.projectName !== null) {
+            this.socket.emit('get_target_data', this.projectName, targetName, (data) => {callback(data)});
         }
     }
 

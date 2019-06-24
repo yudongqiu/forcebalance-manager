@@ -6,6 +6,7 @@ import json
 import copy
 import tempfile
 import numpy as np
+import collections
 
 import forcebalance
 
@@ -14,6 +15,28 @@ from backend.fb_executor import FBExecutor
 
 class FBProject(object):
     project_status = {'idle': 0, 'running':1, 'finished': 2, 'error': 3}
+    default_target_options = collections.defaultdict(dict, {
+        'ABINITIO_GMX': {
+            'energy': True,
+            'force': True,
+            'w_energy': 1.0,
+            'w_force': 1.0,
+            'attenuate': True,
+            'energy_denom': 2.0,
+            'energy_upper': 10.0,
+            'force_rms_override': 100.0,
+        },
+        'ABINITIO_SMIRNOFF': {
+            'energy': True,
+            'force': True,
+            'w_energy': 1.0,
+            'w_force': 1.0,
+            'attenuate': True,
+            'energy_denom': 2.0,
+            'energy_upper': 10.0,
+            'force_rms_override': 100.0,
+        }
+    })
 
     @property
     def status(self):
@@ -200,25 +223,7 @@ class FBProject(object):
                 byte_f.write(fdata)
         assert target_name not in self.fb_targets, f'Target {target_name} already exists!'
         # use default options of each type
-        default_target_options = {
-            'ABINITIO_GMX': {
-                'energy': True,
-                'force': True,
-                'w_energy': 1.0,
-                'w_force': 1.0,
-            },
-            'ABINITIO_SMIRNOFF': {
-                'energy': True,
-                'force': True,
-                'w_energy': 1.0,
-                'w_force': 1.0,
-                'attenuate': True,
-                'energy_denom': 2.0,
-                'energy_upper': 10.0,
-                'force_rms_override': 100.0,
-            }
-        }
-        target_options = default_target_options[target_type]
+        target_options = self.default_target_options[target_type]
         if target_type == 'ABINITIO_GMX':
             gro_filename,qdata_filename,top_filename,mdp_filename = data['fileNames']
             target_options.update({
@@ -302,6 +307,42 @@ class FBProject(object):
         self.save_fb_targets()
 
     @in_project_folder
+    def get_target_data(self, target_name):
+        """ Read detailed target data from targets/ folder based on type """
+        res = {}
+        # check target exist
+        target_options = self.fb_targets.get(target_name, None)
+        if target_options is None:
+            res['error'] = f"target {target_name} not found"
+            print(f"get_target_data: {res['error']}")
+            return res
+        target_folder = os.path.join(self.targets_folder, target_name)
+        if not os.path.isdir(target_folder):
+            res['error'] = f"target folder {target_folder} not found"
+            print(f"get_target_data: {res['error']}")
+            return res
+        # read data from target folder based on type
+        if target_options['type'] in ['ABINITIO_GMX', 'ABINITIO_SMIRNOFF']:
+            # read coords file and send coords data
+            coords_file = os.path.join(target_folder, target_options['coords'])
+            m = forcebalance.molecule.Molecule(coords_file)
+            if 'resname' not in m.Data:
+                m.Data['resname'] = ['MOL'] * m.na
+                m.Data['resid'] = [1] * m.na
+            pdb_string = '\n'.join(m.write_pdb(range(m.na)))
+            res['pdbString'] = pdb_string
+            # read qm energies
+            qdata_file = os.path.join(target_folder, 'qdata.txt')
+            m = forcebalance.molecule.Molecule(qdata_file)
+            eqm = np.array(m.qm_energies)
+            eqm = (eqm - eqm.min()) * 627.509 # convert to relative energies in kcal/mol
+            res['qm_energies'] = eqm.tolist()
+        else:
+            res['error'] = f"get_target_data for target type {target_options['type']} not implemented"
+            print(f"get_target_data: {res['error']}")
+        return res
+
+    @in_project_folder
     def save_fb_targets(self):
         """ Save the fb_targets as a JSON file """
         if not os.path.exists(self.conf_folder):
@@ -320,7 +361,13 @@ class FBProject(object):
                 self.fb_targets = json.load(jfile)
         else:
             # get target options from input file through executor
-            self.fb_targets = copy.deepcopy(self._fbexecutor.input_options['tgt_opts'])
+            self.fb_targets = {}
+            for target_name, target_opts in self._fbexecutor.input_options['tgt_opts'].items():
+                target_type = target_opts['type']
+                loaded_opts = self.default_target_options[target_type].copy()
+                # override default opts with newly loaded ones
+                loaded_opts.update(target_opts)
+                self.fb_targets[target_name] = loaded_opts
         # make sure each existing target has its own folder
         assert os.path.exists(self.targets_folder), 'targets/ folder missing!'
         missing_targets = set(self.fb_targets.keys()) - set(os.listdir(self.targets_folder))

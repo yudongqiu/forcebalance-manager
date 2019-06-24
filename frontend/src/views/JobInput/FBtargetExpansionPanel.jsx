@@ -1,3 +1,5 @@
+/// QYD: THis componenet is not used anymore, as the target options are now handled by dialogs
+/// we keep it here just for future reference use of ExpansionPanel
 import React from "react";
 import PropTypes from 'prop-types';
 // @material-ui/core components
