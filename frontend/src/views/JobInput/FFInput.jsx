@@ -14,6 +14,9 @@ import ExpansionPanelActions from '@material-ui/core/ExpansionPanelActions';
 import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
 import Tooltip from '@material-ui/core/Tooltip';
+import FormControl from '@material-ui/core/FormControl';
+import Input from '@material-ui/core/Input';
+import InputLabel from '@material-ui/core/InputLabel';
 // @material-ui/icons
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import FileUploadIcon from "@material-ui/icons/CloudUpload";
@@ -21,7 +24,6 @@ import AddCircleIcon from '@material-ui/icons/AddCircle';
 import DeleteIcon from '@material-ui/icons/Delete';
 // Components
 import GridItem from "components/Grid/GridItem.jsx";
-import CustomInput from "components/CustomInput/CustomInput.jsx";
 import EnhancedTable from "components/Table/EnhancedTable";
 // Models
 import api from "../../api";
@@ -32,8 +34,11 @@ const styles = {
     display: 'none',
   },
   title: {
-    marginBottom: 16,
+    marginBottom: 15,
     fontSize: 14,
+  },
+  formControl: {
+    marginBottom: 15,
   },
 };
 
@@ -132,38 +137,34 @@ class FFInput extends React.Component {
 
   render () {
     const { classes } = this.props;
-    const { ffText, paramNames, paramValues, paramPriors, paramPriorRules } = this.state;
+    const { fileName, ffText, paramNames, paramValues, paramPriors, paramPriorRules } = this.state;
     const isRunning = (this.props.status === RunningStatus.running);
     const isValidPriorRules = paramPriorRules.every((rule) => {return rule[0] && rule[1] && !isNaN(rule[1])});
 
-    return (<Card>
+    return (<Card elevation={0}>
       <CardContent>
         <div className={classes.title}>Upload a force field file and enter prior rules</div>
-        <CustomInput
-          labelText="Input Force Field File"
-          id="force-field-file"
-          formControlProps={{
-            fullWidth: true
-          }}
-          inputProps={{
-            value: this.state.fileName,
-            placeholder: "Click Upload Button",
-            onChange: null,
-            endAdornment: (
+        <FormControl className={classes.formControl} fullWidth>
+          <InputLabel htmlFor="ff-file">Input Force Field File</InputLabel>
+          <Input
+            id="ff-file"
+            value={fileName}
+            onChange={null}
+            endAdornment={
               <InputAdornment position="end">
-                <input type="file" id="file-upload" className={classes.input} onChange={this.selectForceFieldFile} />
-                <label htmlFor="file-upload">
+                <input type="file" id="ff-file-upload" className={classes.input} onChange={this.selectForceFieldFile} />
+                <label htmlFor="ff-file-upload">
                   <IconButton component="span" disabled={isRunning}>
                     <FileUploadIcon />
                   </IconButton>
                 </label>
               </InputAdornment>
-            ),
-            error: !this.state.fileName
-          }}
-        />
+            }
+            error={fileName==''}
+          />
+        </FormControl>
         {ffText ?
-          <ExpansionPanel>
+          <ExpansionPanel className={classes.expansionPanel} CollapseProps={{timeout: 500}} >
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
               View File Contents
             </ExpansionPanelSummary>
@@ -174,7 +175,7 @@ class FFInput extends React.Component {
           : null
         }
         {paramNames && paramNames.length > 0 ?
-          <ExpansionPanel>
+          <ExpansionPanel className={classes.expansionPanel} CollapseProps={{timeout: 500}} >
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
               Prior Width Rules
             </ExpansionPanelSummary>
@@ -223,7 +224,7 @@ class FFInput extends React.Component {
             </ExpansionPanelDetails>
             <ExpansionPanelActions>
               <Button color="primary" variant="contained" onClick={this.applyPriorRules} disabled={!isValidPriorRules}>Apply</Button>
-        </ExpansionPanelActions>
+            </ExpansionPanelActions>
           </ExpansionPanel>
           : null
         }

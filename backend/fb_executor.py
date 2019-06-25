@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import time
 import copy
+import threading
 import numpy as np
 
 from forcebalance.nifty import lp_load
@@ -49,8 +50,7 @@ class FBExecutor:
         self.input_options = {'gen_opt': {}, 'priors': {}, 'tgt_opts': {}}
         # try to load input file
         self.read_input_options()
-        # try to load optimization state from output file and tmp folder
-        self.read_tmp_folder()
+        # self.read_tmp_folder()
         # read status from output file
         self.read_output_file()
         # store the status of work queue
@@ -60,6 +60,33 @@ class FBExecutor:
             'job_finished': 0,
             'job_total': 0
         }
+        # try to load self.obj_hist and self.mvals_hist from tmp folder
+        # this is slow so we try to do it in thread
+        # this should be done in the last step
+        self.obj_hist = {}
+        self.mvals_hist = {}
+        self.lock = threading.Lock()
+
+    def finish_loading_in_thread(self):
+        """
+        Finish loading tmp folder then notify project.
+        This function runs in a separate thread.
+        """
+        def thread_func():
+            self.read_tmp_folder()
+            self.notify_observer('iter_update')
+            self.notify_observer('status_update')
+        with self.lock:
+            thread = threading.Thread(target=thread_func)
+            thread.start()
+
+    def thread_safe(self):
+        """ Decorator to make sure function runs with thread safety """
+        def new_func(self, *args, **kwargs):
+            with self.lock:
+                return func(self, *args, **kwargs)
+        return new_func
+
 
     def register_observer(self, observer):
         """ register an observer function to handle events """
@@ -203,8 +230,6 @@ class FBExecutor:
     def read_tmp_folder(self):
         """ Update self.obj_hist and self.mval_hist by reading tmp folder """
         t0 = time.time()
-        self.obj_hist = {}
-        self.mvals_hist = {}
         if not os.path.exists(self.tmp_folder):
             print(f"tmp folder {self.tmp_folder} not found")
             return
@@ -230,7 +255,7 @@ class FBExecutor:
                         # load mval value into mval_hist if not exist
                         if opt_iter not in self.mvals_hist:
                             self.mvals_hist[opt_iter] = np.loadtxt(os.path.join(iter_folder_path, 'mvals.txt'))
-        print(f"@@ read_tmp_folder finished ({time.time() - t0:.2f} s)")
+        print(f"@@ read_tmp_folder {self.tmp_folder} finished ({time.time() - t0:.2f} s)")
 
     def read_output_file(self):
         """ Read output file to determine current status """
@@ -248,7 +273,7 @@ class FBExecutor:
         else:
             self.status = 'IDLE'
 
-
+    @thread_safe
     def clean_up(self):
         """ Remove ALL output and temporary files """
         for f in [self.output_file, self.tmp_folder, self.result_folder] + self.files_to_clean:
@@ -257,7 +282,7 @@ class FBExecutor:
             elif os.path.isdir(f):
                 shutil.rmtree(f)
 
-
+    @thread_safe
     def run(self):
         """ Start the ForceBalance run in subprocess """
         assert os.path.exists(self.input_file), f'ForceBalance input file {self.input_file} does not exist'
@@ -289,6 +314,7 @@ class FBExecutor:
         time.sleep(self.interval)
         self.monitor()
 
+    @thread_safe
     def kill(self):
         if not hasattr(self, 'proc'): return
         self.proc.kill()

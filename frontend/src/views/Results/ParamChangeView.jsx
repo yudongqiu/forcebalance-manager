@@ -74,12 +74,13 @@ class ParamChangeView extends React.Component {
       const paramInitValues = paramGroupData.map(data => {return data[1]});
       const paramFinalValues = paramGroupData.map(data => {return data[2]});
       const paramPriorWidths = paramGroupData.map(data => {return data[3]});
+      const yTickValues = [...Array(paramNames.length).keys()];
       tabContent = <div>
         <Plot
           data={[
             {
               x: paramInitValues,
-              y: paramNames,
+              y: yTickValues.map(v => v+0.3),
               name: 'Init Value',
               orientation: 'h',
               marker: {
@@ -91,7 +92,7 @@ class ParamChangeView extends React.Component {
             },
             {
               x: paramFinalValues,
-              y: paramNames,
+              y: yTickValues,
               name: 'Final Value',
               orientation: 'h',
               marker: {
@@ -103,7 +104,7 @@ class ParamChangeView extends React.Component {
             },
             {
               x: paramPriorWidths,
-              y: paramNames,
+              y: yTickValues.map(v => v-0.2),
               name: 'Prior Width',
               orientation: 'h',
               marker: {
@@ -119,6 +120,10 @@ class ParamChangeView extends React.Component {
             barmode: 'group',
             margin: {
               l: 7*maxNameLength,
+            },
+            yaxis:{
+              tickvals: yTickValues,
+              ticktext: paramNames,
             }
           }}
           key={'plot'+tabValue}

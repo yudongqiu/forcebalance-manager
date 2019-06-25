@@ -250,7 +250,7 @@ class TargetInput extends React.Component {
       </Dialog>
     ) : <div/>;
 
-    return (<Card>
+    return (<Card elevation={0}>
       <CardContent>
         <div className={classes.title}>Add targets then click to change target options</div>
         <EnhancedTable

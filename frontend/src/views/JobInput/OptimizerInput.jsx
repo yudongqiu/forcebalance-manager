@@ -87,7 +87,7 @@ class OptimizerInput extends React.Component {
       convergence_gradient, trust0, finite_difference_h, asynchronous, wq_port, wqStatus } = this.state;
 
     return (
-      <Card>
+      <Card elevation={0}>
         <CardContent>
           <div className={classes.title}>Choose optimizer options</div>
           <Grid container>

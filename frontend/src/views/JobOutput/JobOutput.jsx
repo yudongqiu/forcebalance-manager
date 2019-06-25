@@ -79,14 +79,12 @@ class JobOutput extends React.Component {
 
   updateOptimizerState = (data) => {
     if (Object.keys(data).length > 0) {
-      if (this.state.currentIter) {
+      this.setState({
+        optimizerState: data,
+      })
+      if (this.state.currentIter === null) {
         this.setState({
-          optimizerState: data,
-        })
-      } else {
-        this.setState({
-          currentIter: 1,
-          optimizerState: data,
+          currentIter: 0,
         })
       }
     }
@@ -179,7 +177,7 @@ class JobOutput extends React.Component {
                 </div>
               </GridItem>
             </Grid> :
-            "Optimization running"
+            "Waiting for optimization results data"
           }
         </div>
         {TargetObjectiveDialog}

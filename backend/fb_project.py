@@ -77,6 +77,8 @@ class FBProject(object):
         self.opt_state = dict()
         # temporary dict to hold the target validators
         self.target_validators = dict()
+        # default prefix to load files
+        self.prefix = 'fb'
 
     def register_manager(self, manager):
         """ Register the FBmanager instance for callback functions """
@@ -110,15 +112,19 @@ class FBProject(object):
         os.makedirs(project_folder)
         self.project_folder = project_folder
         # create fbexecutor
-        self._fbexecutor = FBExecutor(self.project_folder, prefix='fb')
+        self._fbexecutor = FBExecutor(self.project_folder, prefix=self.prefix)
         self._fbexecutor.register_observer(self.observe_executor)
+        self._fbexecutor.finish_loading_in_thread()
 
     def load_from_project_folder(self, project_folder):
         """ Load the project data from the project folder """
         self.project_folder = project_folder
         os.chdir(project_folder)
-        # create fbexecutor
-        self._fbexecutor = FBExecutor(self.project_folder, prefix='fb')
+        # determine prefix of existing project
+        self.prefix = next(os.path.splitext(f)[0] for f in os.listdir('.') if os.path.splitext(f)[-1]=='.in')
+        print(f"@@ Determined prefix of project {self._name} to be {self.prefix}")
+        # create fbexecutor first, because the options might be loaded from it
+        self._fbexecutor = FBExecutor(self.project_folder, prefix=self.prefix)
         self._fbexecutor.register_observer(self.observe_executor)
         # load optimizer_options
         self.load_optimizer_options()
@@ -129,13 +135,11 @@ class FBProject(object):
             self.force_field = forcebalance.forcefield.FF(self.ff_options)
             # load priors
             self.load_ff_prior()
-            # load previous opt_state
-            self.update_opt_state()
         if os.path.exists(self.targets_folder):
             # load fb_targets
             self.load_fb_targets()
-        # update status
-        self.update_status()
+        self._fbexecutor.finish_loading_in_thread()
+
 
     @in_project_folder
     def setup_forcefield(self, data):
@@ -515,12 +519,19 @@ class FBProject(object):
     def get_final_forcefield_info(self):
         """ return some information about self.force_field """
         if not hasattr(self, 'force_field'):
-            return None
+            return {'error': 'self.force_field not setup yet'}
+        result_folder = os.path.join('result', self.prefix)
+        if not os.path.isdir(result_folder):
+            return {'error': f'result folder {result_folder} not found'}
         raw_text = ''
         for f in self.ff_options['forcefield']:
-            result_folder = os.path.join('result', 'fb')
-            with open(os.path.join(result_folder, f)) as ff_file:
+            ff_filename = os.path.join(result_folder, f)
+            if not os.path.isfile(ff_filename):
+                return {'error': f'Result force field file {ff_filename} not found'}
+            with open(ff_filename) as ff_file:
                 raw_text += ff_file.read() + '\n\n'
+        if len(self.opt_state) == 0:
+            return {'error': f'No optimization finished yet'}
         last_opt_iter = len(self.opt_state) - 1
         return {
             'filenames': self.ff_options['forcefield'],
