@@ -9,10 +9,15 @@ import CardActions from '@material-ui/core/CardActions';
 import IconButton from '@material-ui/core/IconButton';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
+import FormGroup from '@material-ui/core/FormGroup';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import FormLabel from '@material-ui/core/FormLabel';
 // icons
 import CancelIcon from '@material-ui/icons/Cancel';
 import NavigateBeforeIcon from '@material-ui/icons/NavigateBefore';
 import NavigateNextIcon from '@material-ui/icons/NavigateNext';
+import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@material-ui/icons/CheckBox';
 // core components
 import EnhancedTable from "components/Table/EnhancedTable.jsx";
 import MoleculeViewer from "components/MoleculeViewer/MoleculeViewer.jsx";
@@ -21,21 +26,27 @@ import api from "../../../api";
 import { RunningStatus } from "../../../constants";
 // plotly
 import Plot from 'react-plotly.js';
+import { Checkbox } from "@material-ui/core";
 
 const styles = {
   header: {
     paddingBottom: 10,
+  },
+  spanLabel: {
+    paddingLeft: 20,
+    paddingRight: 20,
   }
 };
 
 class AbinitioObjectiveView extends React.Component {
   state = {
     targetData: null,
-    objectiveData: null,
+    objectiveData: {},
     currFrame: 0,
     tabValue: 0,
     targetName: null,
     optIter: null,
+    compareIterSet: new Set([]),
   }
 
   componentDidMount() {
@@ -45,6 +56,8 @@ class AbinitioObjectiveView extends React.Component {
     })
   }
 
+
+
   componentDidUpdate(prevProps, prevState) {
     if (prevProps.targetName !== this.props.targetName || prevProps.optIter !== this.props.optIter) {
       this.setState({
@@ -53,17 +66,33 @@ class AbinitioObjectiveView extends React.Component {
       })
     }
     if (prevState.targetName !== this.state.targetName && this.state.targetName) {
+      // if target changed, clean the objective data and reset state
+      this.setState({
+        targetData: null,
+        objectiveData: {},
+        tabValue: 0,
+        compareIterSet: new Set([]),
+      })
       api.getTargetData(this.state.targetName, this.updateTargetData);
+      api.getTargetObjectiveData(this.state.targetName, this.state.optIter, this.updateObjectiveData(this.state.optIter));
+    } else {
+      if (prevState.optIter !== this.state.optIter && !isNaN(this.state.optIter)) {
+        // if optIter changed, check if we have it already
+        const { targetName, optIter, objectiveData } = this.state;
+        if (!(optIter in objectiveData)) {
+          api.getTargetObjectiveData(targetName, optIter, this.updateObjectiveData(optIter));
+        }
+      }
+      if (!isSetsEqual(prevState.compareIterSet, this.state.compareIterSet)) {
+        // load data for each compareIter
+        const { targetName, compareIterSet, objectiveData } = this.state;
+        for (const iterOpt of compareIterSet) {
+          if (!(iterOpt in objectiveData)) {
+            api.getTargetObjectiveData(targetName, iterOpt, this.updateObjectiveData(iterOpt));
+          }
+        }
+      }
     }
-    if (prevState.optIter !== this.state.optIter && !isNaN(this.state.optIter)) {
-      api.getTargetObjectiveData(this.state.targetName, this.state.optIter, this.updateObjectiveData);
-    }
-    // if (prevState.targetName !== this.state.targetName || prevState.optIter !== this.state.optIter) {
-    //   const { targetName, optIter } = this.state;
-    //   if (targetName != null && !isNaN(optIter)) {
-    //     api.getTargetObjectiveData(targetName, optIter, this.updateObjectiveData);
-    //   }
-    // }
   }
 
   updateTargetData = (data) => {
@@ -72,9 +101,11 @@ class AbinitioObjectiveView extends React.Component {
     })
   }
 
-  updateObjectiveData = (data) => {
+  updateObjectiveData = (optIter) => (data) => {
+    let { objectiveData } = this.state;
+    objectiveData[optIter] = data;
     this.setState({
-      objectiveData: data
+      objectiveData: objectiveData,
     })
   }
 
@@ -114,51 +145,83 @@ class AbinitioObjectiveView extends React.Component {
     }
   }
 
+  changeCheckBox = (iterOpt) => () => {
+    // create new set so the value is "immutable"
+    let compareIterSet = new Set(this.state.compareIterSet);
+    if (compareIterSet.has(iterOpt)) {
+      compareIterSet.delete(iterOpt);
+    } else {
+      compareIterSet.add(iterOpt);
+    }
+    this.setState({compareIterSet});
+  }
+
   render() {
-    const { classes } = this.props;
-    const { targetData, objectiveData, currFrame, tabValue, targetName, optIter } = this.state;
+    const { classes, maxIter } = this.props;
+    const { targetData, objectiveData, currFrame, tabValue, targetName, optIter, compareIterSet } = this.state;
+
+    // objectiveData for current iteration
+    let currObjectiveData = null;
+    if (optIter in objectiveData) {
+      currObjectiveData = objectiveData[optIter];
+    }
+    const compareIterList = Array.from(compareIterSet).sort();
 
     // render scatter plot page
     let scatterPlot = <div />;
-    if (objectiveData && objectiveData.qm_energies) {
-      const maxQMValue = Math.max(...objectiveData.qm_energies);
-      const maxMMValue = Math.max(...objectiveData.mm_energies);
-      const maxValue = Math.max(maxQMValue, maxMMValue);
-      scatterPlot = <Plot
-        data={[
-          {
-            x: objectiveData.qm_energies,
-            y: objectiveData.mm_energies,
+    if (currObjectiveData && currObjectiveData.qm_energies) {
+      const maxQMValue = Math.max(...currObjectiveData.qm_energies);
+      const maxMMValue = Math.max(...currObjectiveData.mm_energies);
+      let maxValue = Math.max(maxQMValue, maxMMValue);
+      let data = [{
+        x: currObjectiveData.qm_energies,
+        y: currObjectiveData.mm_energies,
+        type: 'scatter',
+        mode: 'markers',
+        name: 'Relative Energies'
+      }];
+      for (const iterOpt of compareIterList) {
+        if ((iterOpt in objectiveData) && objectiveData[iterOpt].qm_energies && objectiveData[iterOpt].qm_energies.length > 0) {
+          data.push({
+            x: objectiveData[iterOpt].qm_energies,
+            y: objectiveData[iterOpt].mm_energies,
             type: 'scatter',
             mode: 'markers',
-            name: 'Relative Energies'
-          },
-          {
-            x: [0, maxValue],
-            y: [0, maxValue],
-            mode: 'lines',
-            name: 'reference',
-            line: {
-              dash: 'dot',
-              width: 2
-            }
-          },
-        ]}
+            name: "Iter " + iterOpt,
+          });
+          maxValue = Math.max(maxValue, ...objectiveData[iterOpt].qm_energies, ...objectiveData[iterOpt].mm_energies);
+        }
+      }
+      data.push({
+        x: [0, maxValue],
+        y: [0, maxValue],
+        mode: 'lines',
+        name: 'reference',
+        line: {
+          dash: 'dot',
+          width: 2
+        },
+        marker: {
+          color: 'rgba(50,50,50,0.6)',
+        },
+      });
+      scatterPlot = <Plot
+        data={data}
         style={{ width: '100%', height: '100%' }}
         layout={ {
           title: 'QM vs. MM Scatter Plot',
           xaxis: {
-            title: 'MM Relative Energy [ kcal/mol ]',
+            title: 'QM Relative Energy [ kcal/mol ]',
             range: [0, maxValue+1],
           },
           yaxis: {
             scaleanchor: "x",
-            title: 'QM Relative Energy [ kcal/mol ]',
+            title: 'MM Relative Energy [ kcal/mol ]',
             range: [0, maxValue+1],
           },
           showlegend: true,
           legend: {
-            x: 0.5,
+            x: 0.8,
             y: 0.2
           },
           margin: {
@@ -177,26 +240,35 @@ class AbinitioObjectiveView extends React.Component {
 
     // render line plot page
     let linePlot = <div />;
-    if (objectiveData && objectiveData.qm_energies) {
-      const maxQMValue = Math.max(...objectiveData.qm_energies);
-      const maxMMValue = Math.max(...objectiveData.mm_energies);
+    if (currObjectiveData && currObjectiveData.qm_energies) {
+      const maxQMValue = Math.max(...currObjectiveData.qm_energies);
+      const maxMMValue = Math.max(...currObjectiveData.mm_energies);
       const maxValue = Math.max(maxQMValue, maxMMValue);
-      const xValues = [...Array(objectiveData.qm_energies.length).keys()];
+      const xValues = [...Array(currObjectiveData.qm_energies.length).keys()];
+      let data = [{
+        x: xValues,
+        y: currObjectiveData.qm_energies,
+        mode: 'lines+markers',
+        name: 'QM Energy'
+      },
+      {
+        x: xValues,
+        y: currObjectiveData.mm_energies,
+        mode: 'lines+markers',
+        name: 'MM Energy'
+      }];
+      for (const iterOpt of compareIterList) {
+        if ((iterOpt in objectiveData) && objectiveData[iterOpt].qm_energies && objectiveData[iterOpt].mm_energies.length > 0) {
+          data.push({
+            x: xValues,
+            y: objectiveData[iterOpt].mm_energies,
+            mode: 'lines+markers',
+            name: 'Iter ' + iterOpt,
+          });
+        }
+      }
       linePlot = <Plot
-        data={[
-          {
-            x: xValues,
-            y: objectiveData.qm_energies,
-            mode: 'lines+markers',
-            name: 'QM Energy'
-          },
-          {
-            x: xValues,
-            y: objectiveData.mm_energies,
-            mode: 'lines+markers',
-            name: 'MM Energy'
-          },
-        ]}
+        data={data}
         style={{ width: '100%', height: '100%' }}
         layout={ {
           title: 'QM vs. MM Line Plot',
@@ -206,7 +278,7 @@ class AbinitioObjectiveView extends React.Component {
           yaxis: {
             title: 'Relative Energies [ kcal/mol ]',
           },
-          showlegend: false,
+          showlegend: true,
           margin: {
             l:40,
             r:40,
@@ -220,13 +292,15 @@ class AbinitioObjectiveView extends React.Component {
     }
     const linePlotPage = <div key='plot2'>{linePlot}</div>;
 
+
     // render table page
     const rows = [];
-    if (objectiveData && objectiveData.qm_energies && objectiveData.qm_energies.length > 0) {
-      for (let i = 0; i < objectiveData.qm_energies.length; i++) {
-        rows.push([i.toString(), objectiveData.qm_energies[i], objectiveData.mm_energies[i], objectiveData.diff[i], objectiveData.weights[i]]);
+    if (currObjectiveData && currObjectiveData.qm_energies && currObjectiveData.qm_energies.length > 0) {
+      for (let i = 0; i < currObjectiveData.qm_energies.length; i++) {
+        rows.push([i.toString(), currObjectiveData.qm_energies[i], currObjectiveData.mm_energies[i], currObjectiveData.diff[i], currObjectiveData.weights[i]]);
       }
     }
+
     const tablePage = <div>
       <EnhancedTable
         tableHead={["#", "QM Energies", "MM Energies", "Diff.", "Weight"]}
@@ -238,9 +312,10 @@ class AbinitioObjectiveView extends React.Component {
     </div>;
 
     const gradData = [];
-    if (objectiveData && objectiveData.gradients && objectiveData.plist) {
-      for (let i = 0; i < objectiveData.gradients.length; i++) {
-        gradData.push([objectiveData.plist[i], objectiveData.gradients[i]]);
+
+    if (currObjectiveData && currObjectiveData.gradients && currObjectiveData.plist) {
+      for (let i = 0; i < currObjectiveData.gradients.length; i++) {
+        gradData.push([currObjectiveData.plist[i], currObjectiveData.gradients[i]]);
       }
     }
     const gradientsPage = <div>
@@ -255,6 +330,22 @@ class AbinitioObjectiveView extends React.Component {
     const tabContents = [scatterPlotPage, linePlotPage, tablePage, gradientsPage];
 
     const mview = <MoleculeViewer pdbString={targetData? targetData.pdbString:null} title={'Geometries'} frame={currFrame}/>;
+
+    const compareIterSelectors = [...Array(maxIter+1).keys()].map(iterOpt => {
+        return <FormControlLabel
+          control={
+            <Checkbox
+              icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+              checkedIcon={<CheckBoxIcon fontSize="small" />}
+              checked={compareIterSet.has(iterOpt)}
+              onChange={this.changeCheckBox(iterOpt)}
+              color='primary'
+            />
+          }
+          label={iterOpt}
+          key={'checkbox-'+iterOpt}
+        />
+      });
 
     return (
       <Card>
@@ -272,9 +363,11 @@ class AbinitioObjectiveView extends React.Component {
               <NavigateBeforeIcon fontSize='small'/>
             </IconButton>,
             optIter,
-            <IconButton onClick={this.handleClickNextIter} disabled={!(this.props.maxIter && optIter < this.props.maxIter)} key='iconbutton2'>
+            <IconButton onClick={this.handleClickNextIter} disabled={!(maxIter && optIter < maxIter)} key='iconbutton2'>
               <NavigateNextIcon fontSize='small'/>
-            </IconButton>
+            </IconButton>,
+            <span className={classes.spanLabel} key={'checkbox-label'}>Compare with</span>,
+            ...compareIterSelectors,
           ]}
         />
         <CardContent>
@@ -307,3 +400,7 @@ AbinitioObjectiveView.propTypes = {
 };
 
 export default withStyles(styles)(AbinitioObjectiveView);
+
+function isSetsEqual (a, b) {
+  return a.size === b.size && [...a].every(value => b.has(value));
+}
