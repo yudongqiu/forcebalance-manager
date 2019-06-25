@@ -160,7 +160,7 @@ class FFInput extends React.Component {
                 </label>
               </InputAdornment>
             }
-            error={fileName==''}
+            error={fileName===''}
           />
         </FormControl>
         {ffText ?

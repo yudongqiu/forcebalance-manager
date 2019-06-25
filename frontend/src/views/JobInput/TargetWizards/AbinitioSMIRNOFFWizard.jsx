@@ -455,7 +455,7 @@ class AbinitioSMIRNOFFWizard extends React.Component {
     );
 
     let finalTestPage = <div />;
-    if (activeStep == 3) {
+    if (activeStep === 3) {
       const success = finalData.success;
       const avatar = <Avatar className={success ? classes.greenAvatar: classes.redAvatar}>
         {success ? <DoneIcon /> : <ErrorIcon />}
@@ -474,9 +474,9 @@ class AbinitioSMIRNOFFWizard extends React.Component {
     const stepContents = [coordsUploadPage, qdataUploadPage, mol2pdbUploadPage, finalTestPage];
 
     let nextButton = <Button variant="contained" color="primary" onClick={this.handleNext} disabled={!completed[activeStep]}>Next</Button>;
-    if (activeStep == stepContents.length - 2) {
+    if (activeStep === stepContents.length - 2) {
       nextButton = <Button variant="contained" color="primary" onClick={this.handleFinalValidate} disabled={!completed[activeStep]}>Validate</Button>;
-    } else if (activeStep == stepContents.length - 1) {
+    } else if (activeStep === stepContents.length - 1) {
       nextButton = <Button variant="contained" color="primary" onClick={this.handleCreate} disabled={!completed[activeStep]}>Create</Button>
     }
 
