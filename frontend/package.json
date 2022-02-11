@@ -8,7 +8,7 @@
     "@material-ui/core": "3.5.1",
     "@material-ui/icons": "3.0.1",
     "@types/markerclustererplus": "2.1.33",
-    "ajv": "6.5.1",
+    "ajv": "6.12.3",
     "axios": "0.18.x",
     "chartist": "0.10.1",
     "chartist-plugin-axistitle": "0.0.4",
